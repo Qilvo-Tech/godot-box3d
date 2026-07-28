@@ -59,6 +59,14 @@ void Box3DConcavePolygonShapeImpl3D::_rebuild_mesh() {
 		max_point = max_point.max(faces[i]);
 	}
 
+	// Box3D meshes use a winding order that is the opposite of what godot's concave shapes use
+	// we need to swap the winding order so trimesh collision works
+	for (int t = 0; t < triangle_count; t++) {
+		indices[t * 3 + 0] = t * 3 + 0;
+		indices[t * 3 + 1] = t * 3 + 2;
+		indices[t * 3 + 2] = t * 3 + 1;
+	}
+
 	aabb = AABB(min_point, max_point - min_point);
 
 	b3MeshDef def = {};
