@@ -36,7 +36,7 @@ func _initialize() -> void:
 	root.add_child(area)
 
 	# Convex dynamic body travelling straight down through the area.
-	body = RigidBody3D.new()1
+	body = RigidBody3D.new()
 	body.name = "FallingBody"
 	body.gravity_scale = 0.0
 	var body_shape: CollisionShape3D = CollisionShape3D.new()
