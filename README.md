@@ -27,6 +27,17 @@ The structure of this extension is based on [godot-jolt](https://github.com/godo
 - Performance benchmarking and tuning
 - Documentation
 
+## Behavior differences
+
+- **`Area3D` does not detect trimesh or heightmap bodies.** In Box3D a concave shape
+  (`ConcavePolygonShape3D`) or `HeightMapShape3D` can never act as a sensor *visitor* —
+  by design, since testing an arbitrary mesh against a sensor is too expensive. So an
+  `Area3D` silently ignores a body whose shape is a trimesh or heightmap: no
+  `body_entered` / `body_exited` fires for it. This diverges from Godot's built-in
+  physics (and Jolt), which report such a body on the first physics frame. If you need a
+  body to be detected by an area, give it a convex shape. (A trimesh may still be used
+  *as* an `Area3D`'s own shape to detect convex bodies passing through it.)
+
 ## Requirements
 
 - Godot 4.3 or newer
