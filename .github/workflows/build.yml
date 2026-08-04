@@ -22,7 +22,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: true
 
@@ -66,7 +66,7 @@ jobs:
         run: scripts/run_headless_tests.sh
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: godot-box3d-${{ runner.os }}
           path: bin/
