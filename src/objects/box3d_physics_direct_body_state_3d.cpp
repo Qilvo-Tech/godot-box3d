@@ -8,18 +8,32 @@
 #include <box3d/box3d.h>
 
 Vector3 Box3DPhysicsDirectBodyState3D::_get_total_gravity() const {
-	if (body->get_space() != nullptr) {
-		return b3_to_godot(b3World_GetGravity(body->get_space()->get_world_id())) * (float)body->get_gravity_scale();
+	Box3DSpace3D* space = body->get_space();
+	if (space == nullptr) {
+		return Vector3();
 	}
-	return Vector3();
+	const Box3DSpace3D::AreaOverrides overrides = space->compute_area_overrides(body);
+	Vector3 gravity = overrides.gravity;
+	if (!overrides.replaces_world_gravity) {
+		gravity += b3_to_godot(b3World_GetGravity(space->get_world_id()));
+	}
+	return gravity * (float)body->get_gravity_scale();
 }
 
 double Box3DPhysicsDirectBodyState3D::_get_total_angular_damp() const {
-	return body->get_angular_damping();
+	Box3DSpace3D* space = body->get_space();
+	if (space == nullptr) {
+		return body->get_angular_damping();
+	}
+	return space->compute_area_overrides(body).angular_damp;
 }
 
 double Box3DPhysicsDirectBodyState3D::_get_total_linear_damp() const {
-	return body->get_linear_damping();
+	Box3DSpace3D* space = body->get_space();
+	if (space == nullptr) {
+		return body->get_linear_damping();
+	}
+	return space->compute_area_overrides(body).linear_damp;
 }
 
 Vector3 Box3DPhysicsDirectBodyState3D::_get_center_of_mass() const {

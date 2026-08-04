@@ -19,6 +19,7 @@ func _ready() -> void:
 	_add_monitored_area()
 	_add_hinge_door()
 	_add_impact_reporter()
+	_add_zero_gravity_well()
 
 
 func _add_camera() -> void:
@@ -178,6 +179,51 @@ func _on_area_body_entered(body: Node3D) -> void:
 
 func _on_area_body_exited(body: Node3D) -> void:
 	print("[Area] exited by: ", body.name)
+
+
+# Spheres fall into an area that replaces gravity with zero and damps them to a stop.
+func _add_zero_gravity_well() -> void:
+	var area: Area3D = Area3D.new()
+	area.name = "ZeroGravityWell"
+	area.position = Vector3(-8, 4, -4)
+	area.gravity_space_override = Area3D.SPACE_OVERRIDE_REPLACE
+	area.gravity = 0.0
+	area.linear_damp_space_override = Area3D.SPACE_OVERRIDE_REPLACE
+	area.linear_damp = 1.0
+
+	var shape: BoxShape3D = BoxShape3D.new()
+	shape.size = Vector3(5, 6, 5)
+	var collision: CollisionShape3D = CollisionShape3D.new()
+	collision.shape = shape
+	area.add_child(collision)
+
+	var mesh: MeshInstance3D = MeshInstance3D.new()
+	var box_mesh: BoxMesh = BoxMesh.new()
+	box_mesh.size = shape.size
+	mesh.mesh = box_mesh
+	var material: StandardMaterial3D = StandardMaterial3D.new()
+	material.albedo_color = Color(0.3, 0.9, 0.4, 0.25)
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mesh.material_override = material
+	area.add_child(mesh)
+	add_child(area)
+
+	for i in 3:
+		var ball: RigidBody3D = RigidBody3D.new()
+		ball.name = "WellBall%d" % i
+		ball.position = Vector3(-9.0 + i, 9.0 + i, -4)
+		var ball_collision: CollisionShape3D = CollisionShape3D.new()
+		var sphere: SphereShape3D = SphereShape3D.new()
+		sphere.radius = 0.4
+		ball_collision.shape = sphere
+		ball.add_child(ball_collision)
+		var ball_mesh: MeshInstance3D = MeshInstance3D.new()
+		var sphere_mesh: SphereMesh = SphereMesh.new()
+		sphere_mesh.radius = sphere.radius
+		sphere_mesh.height = sphere.radius * 2.0
+		ball_mesh.mesh = sphere_mesh
+		ball.add_child(ball_mesh)
+		add_child(ball)
 
 
 # Drops a body that prints its landing contacts.

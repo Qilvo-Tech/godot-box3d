@@ -68,6 +68,18 @@ public:
 	// call_deferred).
 	void flush_queries();
 
+	struct AreaOverrides {
+		// Area contribution only; world gravity is added on top unless replaces_world is set.
+		Vector3 gravity;
+		real_t linear_damp = 0.0;
+		real_t angular_damp = 0.0;
+		bool affects_gravity = false;
+		bool replaces_world_gravity = false;
+	};
+
+	// Resolves the areas overlapping a body into the gravity and damping it should feel.
+	AreaOverrides compute_area_overrides(Box3DBodyImpl3D* p_body) const;
+
 private:
 	struct PendingStateSync {
 		Box3DBodyImpl3D* body = nullptr;

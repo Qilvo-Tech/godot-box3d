@@ -133,25 +133,142 @@ void Box3DSpace3D::step(float p_step) {
 	b3World_GetJointEvents(world_id);
 }
 
-void Box3DSpace3D::_apply_area_overrides() {
+// Godot applies lower priority first so higher priority wins; ties keep a stable order.
+struct AreaPriorityComparator {
+	bool operator()(Box3DAreaImpl3D* p_a, Box3DAreaImpl3D* p_b) const {
+		if (p_a->get_priority() != p_b->get_priority()) {
+			return p_a->get_priority() < p_b->get_priority();
+		}
+		return p_a->get_rid().get_id() < p_b->get_rid().get_id();
+	}
+};
+
+Box3DSpace3D::AreaOverrides Box3DSpace3D::compute_area_overrides(Box3DBodyImpl3D* p_body) const {
+	AreaOverrides result;
+	result.linear_damp = p_body->get_linear_damping();
+	result.angular_damp = p_body->get_angular_damping();
+
+	LocalVector<Box3DAreaImpl3D*> overlapping;
 	for (Box3DAreaImpl3D* area : areas) {
 		if (area->get_gravity_mode() == PhysicsServer3D::AREA_SPACE_OVERRIDE_DISABLED &&
 				area->get_linear_damp_mode() == PhysicsServer3D::AREA_SPACE_OVERRIDE_DISABLED &&
 				area->get_angular_damp_mode() == PhysicsServer3D::AREA_SPACE_OVERRIDE_DISABLED) {
 			continue;
 		}
+		if (area->get_overlaps().has(p_body)) {
+			overlapping.push_back(area);
+		}
+	}
+	if (overlapping.is_empty()) {
+		return result;
+	}
+	overlapping.sort_custom<AreaPriorityComparator>();
 
-		for (const KeyValue<Box3DShapedObjectImpl3D*, int32_t>& overlap : area->get_overlaps()) {
-			auto* body = dynamic_cast<Box3DBodyImpl3D*>(overlap.key);
-			if (body == nullptr || !body->has_body_id()) {
-				continue;
-			}
-			if (!body->is_omitting_force_integration() &&
-					area->get_gravity_mode() != PhysicsServer3D::AREA_SPACE_OVERRIDE_DISABLED) {
-				const Vector3 gravity = area->compute_gravity(body->get_transform().origin);
-				b3Body_ApplyForceToCenter(body->get_body_id(), godot_to_b3(gravity * (float)body->get_mass()), false);
+	bool gravity_done = false;
+	bool linear_done = false;
+	bool angular_done = false;
+
+	for (Box3DAreaImpl3D* area : overlapping) {
+		const PhysicsServer3D::AreaSpaceOverrideMode gravity_mode = area->get_gravity_mode();
+		if (!gravity_done && gravity_mode != PhysicsServer3D::AREA_SPACE_OVERRIDE_DISABLED) {
+			const Vector3 gravity = area->compute_gravity(p_body->get_transform().origin);
+			result.affects_gravity = true;
+			switch (gravity_mode) {
+				case PhysicsServer3D::AREA_SPACE_OVERRIDE_COMBINE:
+					result.gravity += gravity;
+					break;
+				case PhysicsServer3D::AREA_SPACE_OVERRIDE_COMBINE_REPLACE:
+					result.gravity += gravity;
+					result.replaces_world_gravity = true;
+					gravity_done = true;
+					break;
+				case PhysicsServer3D::AREA_SPACE_OVERRIDE_REPLACE:
+					result.gravity = gravity;
+					result.replaces_world_gravity = true;
+					gravity_done = true;
+					break;
+				case PhysicsServer3D::AREA_SPACE_OVERRIDE_REPLACE_COMBINE:
+					result.gravity = gravity;
+					result.replaces_world_gravity = true;
+					break;
+				default:
+					break;
 			}
 		}
+
+		const PhysicsServer3D::AreaSpaceOverrideMode linear_mode = area->get_linear_damp_mode();
+		if (!linear_done && linear_mode != PhysicsServer3D::AREA_SPACE_OVERRIDE_DISABLED) {
+			const real_t damp = area->get_linear_damp();
+			switch (linear_mode) {
+				case PhysicsServer3D::AREA_SPACE_OVERRIDE_COMBINE:
+					result.linear_damp += damp;
+					break;
+				case PhysicsServer3D::AREA_SPACE_OVERRIDE_COMBINE_REPLACE:
+					result.linear_damp += damp;
+					linear_done = true;
+					break;
+				case PhysicsServer3D::AREA_SPACE_OVERRIDE_REPLACE:
+					result.linear_damp = damp;
+					linear_done = true;
+					break;
+				case PhysicsServer3D::AREA_SPACE_OVERRIDE_REPLACE_COMBINE:
+					result.linear_damp = damp;
+					break;
+				default:
+					break;
+			}
+		}
+
+		const PhysicsServer3D::AreaSpaceOverrideMode angular_mode = area->get_angular_damp_mode();
+		if (!angular_done && angular_mode != PhysicsServer3D::AREA_SPACE_OVERRIDE_DISABLED) {
+			const real_t damp = area->get_angular_damp();
+			switch (angular_mode) {
+				case PhysicsServer3D::AREA_SPACE_OVERRIDE_COMBINE:
+					result.angular_damp += damp;
+					break;
+				case PhysicsServer3D::AREA_SPACE_OVERRIDE_COMBINE_REPLACE:
+					result.angular_damp += damp;
+					angular_done = true;
+					break;
+				case PhysicsServer3D::AREA_SPACE_OVERRIDE_REPLACE:
+					result.angular_damp = damp;
+					angular_done = true;
+					break;
+				case PhysicsServer3D::AREA_SPACE_OVERRIDE_REPLACE_COMBINE:
+					result.angular_damp = damp;
+					break;
+				default:
+					break;
+			}
+		}
+	}
+
+	return result;
+}
+
+void Box3DSpace3D::_apply_area_overrides() {
+	for (Box3DBodyImpl3D* body : bodies) {
+		if (!body->has_body_id() || body->is_omitting_force_integration()) {
+			continue;
+		}
+
+		const AreaOverrides overrides = compute_area_overrides(body);
+
+		b3Body_SetLinearDamping(body->get_body_id(), (float)overrides.linear_damp);
+		b3Body_SetAngularDamping(body->get_body_id(), (float)overrides.angular_damp);
+
+		if (!overrides.affects_gravity) {
+			b3Body_SetGravityScale(body->get_body_id(), (float)body->get_gravity_scale());
+			continue;
+		}
+
+		// Box3D has no per-body gravity vector, so contribute the area gravity as an
+		// equivalent velocity delta. A force would divide by mass and damp differently.
+		const float world_scale = overrides.replaces_world_gravity ? 0.0f : (float)body->get_gravity_scale();
+		b3Body_SetGravityScale(body->get_body_id(), world_scale);
+		const Vector3 delta = overrides.gravity * body->get_gravity_scale() * last_step;
+		const b3Vec3 velocity = b3Body_GetLinearVelocity(body->get_body_id());
+		b3Body_SetLinearVelocity(body->get_body_id(), b3Add(velocity, godot_to_b3(delta)));
 	}
 }
 
