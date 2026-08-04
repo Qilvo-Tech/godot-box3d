@@ -133,13 +133,13 @@ void Box3DSpace3D::step(float p_step) {
 	b3World_GetJointEvents(world_id);
 }
 
-// Godot applies lower priority first so higher priority wins; ties keep a stable order.
+// Godot walks areas highest priority first, so a REPLACE there wins; ties stay stable.
 struct AreaPriorityComparator {
 	bool operator()(Box3DAreaImpl3D* p_a, Box3DAreaImpl3D* p_b) const {
 		if (p_a->get_priority() != p_b->get_priority()) {
-			return p_a->get_priority() < p_b->get_priority();
+			return p_a->get_priority() > p_b->get_priority();
 		}
-		return p_a->get_rid().get_id() < p_b->get_rid().get_id();
+		return p_a->get_rid().get_id() > p_b->get_rid().get_id();
 	}
 };
 

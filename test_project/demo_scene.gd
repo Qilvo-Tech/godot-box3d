@@ -20,6 +20,7 @@ func _ready() -> void:
 	_add_hinge_door()
 	_add_impact_reporter()
 	_add_zero_gravity_well()
+	_add_gravity_orb()
 
 
 func _add_camera() -> void:
@@ -179,6 +180,57 @@ func _on_area_body_entered(body: Node3D) -> void:
 
 func _on_area_body_exited(body: Node3D) -> void:
 	print("[Area] exited by: ", body.name)
+
+
+# Point gravity pulling toward a center offset from the area's own origin.
+func _add_gravity_orb() -> void:
+	var center: Vector3 = Vector3(0, 3, 0)
+
+	var area: Area3D = Area3D.new()
+	area.name = "GravityOrb"
+	area.position = Vector3(14, 2, 0)
+	area.gravity_space_override = Area3D.SPACE_OVERRIDE_REPLACE
+	area.gravity_point = true
+	area.gravity_point_center = center
+	area.gravity = 15.0
+
+	var shape: SphereShape3D = SphereShape3D.new()
+	shape.radius = 7.0
+	var collision: CollisionShape3D = CollisionShape3D.new()
+	collision.shape = shape
+	area.add_child(collision)
+
+	var marker: MeshInstance3D = MeshInstance3D.new()
+	var marker_mesh: SphereMesh = SphereMesh.new()
+	marker_mesh.radius = 0.3
+	marker_mesh.height = 0.6
+	marker.mesh = marker_mesh
+	marker.position = center
+	var marker_material: StandardMaterial3D = StandardMaterial3D.new()
+	marker_material.albedo_color = Color(1.0, 0.85, 0.2)
+	marker_material.emission_enabled = true
+	marker_material.emission = Color(1.0, 0.85, 0.2)
+	marker.material_override = marker_material
+	area.add_child(marker)
+	add_child(area)
+
+	for i in 4:
+		var ball: RigidBody3D = RigidBody3D.new()
+		ball.name = "OrbBall%d" % i
+		ball.position = area.position + center + Vector3(3.5 - i * 0.5, 2.0 + i, 0)
+		ball.gravity_scale = 1.0
+		var ball_collision: CollisionShape3D = CollisionShape3D.new()
+		var sphere: SphereShape3D = SphereShape3D.new()
+		sphere.radius = 0.3
+		ball_collision.shape = sphere
+		ball.add_child(ball_collision)
+		var ball_mesh: MeshInstance3D = MeshInstance3D.new()
+		var sphere_mesh: SphereMesh = SphereMesh.new()
+		sphere_mesh.radius = sphere.radius
+		sphere_mesh.height = sphere.radius * 2.0
+		ball_mesh.mesh = sphere_mesh
+		ball.add_child(ball_mesh)
+		add_child(ball)
 
 
 # Spheres fall into an area that replaces gravity with zero and damps them to a stop.
