@@ -3,11 +3,26 @@
 #include "box3d_shaped_object_impl_3d.hpp"
 
 #include <godot_cpp/classes/physics_server3d.hpp>
+#include <godot_cpp/templates/local_vector.hpp>
 #include <godot_cpp/variant/callable.hpp>
 
 using namespace godot;
 
 class Box3DPhysicsDirectBodyState3D;
+
+// One Godot-facing contact point, flattened from a Box3D manifold point. Box3D reports
+// contacts per shape pair with up to four points per manifold (more for meshes), while
+// Godot's PhysicsDirectBodyState3D exposes a flat indexed list.
+struct Box3DContactPoint3D {
+	Vector3 local_position;
+	Vector3 local_normal;
+	Vector3 impulse;
+	Vector3 local_velocity;
+	Vector3 collider_position;
+	Vector3 collider_velocity;
+	RID collider_rid;
+	uint64_t collider_instance_id = 0;
+};
 
 // RigidBody-facing wrapper: static/kinematic/dynamic bodies. Box3D requires a valid world
 // before a body can be created, so construction of the b3BodyId is deferred until
@@ -146,9 +161,12 @@ public:
 
 	void set_max_contacts_reported(int32_t p_count) { max_contacts_reported = p_count; }
 
-	bool is_contact_monitor_enabled() const { return contact_monitor_enabled; }
+	// Rebuilds the contact cache from Box3D. Called once per step, after b3World_Step, so
+	// every PhysicsDirectBodyState3D contact accessor reads consistent data without
+	// re-querying (b3ContactData manifold pointers are only valid until the next step).
+	void refresh_contacts();
 
-	void set_contact_monitor_enabled(bool p_enabled) { contact_monitor_enabled = p_enabled; }
+	const LocalVector<Box3DContactPoint3D>& get_contacts() const { return contacts; }
 
 protected:
 	b3BodyId _create_body_id(b3WorldId p_world_id) override;
@@ -204,7 +222,8 @@ private:
 	Variant force_integration_userdata;
 
 	int32_t max_contacts_reported = 0;
-	bool contact_monitor_enabled = false;
+
+	LocalVector<Box3DContactPoint3D> contacts;
 
 	Box3DPhysicsDirectBodyState3D* direct_state = nullptr;
 };

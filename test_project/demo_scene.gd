@@ -18,6 +18,7 @@ func _ready() -> void:
 	_add_falling_bodies()
 	_add_monitored_area()
 	_add_hinge_door()
+	_add_impact_reporter()
 
 
 func _add_camera() -> void:
@@ -177,6 +178,47 @@ func _on_area_body_entered(body: Node3D) -> void:
 
 func _on_area_body_exited(body: Node3D) -> void:
 	print("[Area] exited by: ", body.name)
+
+
+# Drops a body that reports its landing contacts, exercising the contact accessors on
+# PhysicsDirectBodyState3D (normal, position, impulse, and the resolved collider node).
+func _add_impact_reporter() -> void:
+	var body: RigidBody3D = RigidBody3D.new()
+	body.name = "ImpactReporter"
+	body.position = Vector3(7, 6, -3)
+	body.contact_monitor = true
+	body.max_contacts_reported = 4
+
+	var shape: BoxShape3D = BoxShape3D.new()
+	shape.size = Vector3(1, 1, 1)
+	var collision: CollisionShape3D = CollisionShape3D.new()
+	collision.shape = shape
+	body.add_child(collision)
+
+	var mesh: MeshInstance3D = MeshInstance3D.new()
+	var box_mesh: BoxMesh = BoxMesh.new()
+	box_mesh.size = shape.size
+	mesh.mesh = box_mesh
+	var material: StandardMaterial3D = StandardMaterial3D.new()
+	material.albedo_color = Color(0.9, 0.3, 0.3)
+	mesh.material_override = material
+	body.add_child(mesh)
+
+	body.body_entered.connect(_on_impact_body_entered.bind(body))
+	add_child(body)
+
+
+func _on_impact_body_entered(other: Node, body: RigidBody3D) -> void:
+	var state: PhysicsDirectBodyState3D = PhysicsServer3D.body_get_direct_state(body.get_rid())
+	if state == null or state.get_contact_count() == 0:
+		return
+	print("[Impact] %s hit %s at %v, normal %v, impulse %.2f" % [
+		body.name,
+		other.name,
+		state.get_contact_local_position(0),
+		state.get_contact_local_normal(0),
+		state.get_contact_impulse(0).length(),
+	])
 
 
 func _add_hinge_door() -> void:
