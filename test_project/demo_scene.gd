@@ -21,6 +21,7 @@ func _ready() -> void:
 	_add_impact_reporter()
 	_add_zero_gravity_well()
 	_add_gravity_orb()
+	_add_exception_pair()
 
 
 func _add_camera() -> void:
@@ -180,6 +181,43 @@ func _on_area_body_entered(body: Node3D) -> void:
 
 func _on_area_body_exited(body: Node3D) -> void:
 	print("[Area] exited by: ", body.name)
+
+
+# Two overlapping boxes with a collision exception pass through each other, while a third
+# without one bounces off the stack below it.
+func _add_exception_pair() -> void:
+	var base: Vector3 = Vector3(-8, 1.0, 6)
+
+	var first: RigidBody3D = _make_exception_box(base, Color(0.4, 0.6, 1.0))
+	var second: RigidBody3D = _make_exception_box(base + Vector3(0.4, 0.3, 0), Color(0.2, 0.35, 0.8))
+	first.add_collision_exception_with(second)
+
+	_make_exception_box(base + Vector3(3, 0, 0), Color(1.0, 0.6, 0.2))
+
+
+func _make_exception_box(position: Vector3, color: Color) -> RigidBody3D:
+	var body: RigidBody3D = RigidBody3D.new()
+	body.position = position
+	body.gravity_scale = 0.0
+	body.angular_velocity = Vector3(0, 1.5, 0)
+
+	var shape: BoxShape3D = BoxShape3D.new()
+	shape.size = Vector3(1, 1, 1)
+	var collision: CollisionShape3D = CollisionShape3D.new()
+	collision.shape = shape
+	body.add_child(collision)
+
+	var mesh: MeshInstance3D = MeshInstance3D.new()
+	var box_mesh: BoxMesh = BoxMesh.new()
+	box_mesh.size = shape.size
+	mesh.mesh = box_mesh
+	var material: StandardMaterial3D = StandardMaterial3D.new()
+	material.albedo_color = color
+	mesh.material_override = material
+	body.add_child(mesh)
+
+	add_child(body)
+	return body
 
 
 # Point gravity pulling toward a center offset from the area's own origin.

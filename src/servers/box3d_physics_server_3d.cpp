@@ -2,6 +2,7 @@
 
 #include "../joints/box3d_hinge_joint_impl_3d.hpp"
 #include "../joints/box3d_joint_impl_3d.hpp"
+#include "../joints/box3d_filter_joint_impl_3d.hpp"
 #include "../joints/box3d_pin_joint_impl_3d.hpp"
 #include "../joints/box3d_slider_joint_impl_3d.hpp"
 #include "../misc/type_conversions.hpp"
@@ -43,6 +44,27 @@ Box3DShapedObjectImpl3D* Box3DPhysicsServer3D::_get_shaped_object(const RID& p_r
 		return area;
 	}
 	return nullptr;
+}
+
+void Box3DPhysicsServer3D::_clear_collision_exceptions(Box3DBodyImpl3D* p_body) {
+	for (const KeyValue<RID, Box3DFilterJointImpl3D*>& entry : p_body->get_collision_exceptions()) {
+		memdelete(entry.value);
+	}
+	p_body->get_collision_exceptions().clear();
+
+	// Exceptions are stored one-sided, so other bodies may still reference this one.
+	const RID rid = p_body->get_rid();
+	for (Box3DBodyImpl3D* other : bodies_with_exceptions) {
+		if (other == p_body) {
+			continue;
+		}
+		HashMap<RID, Box3DFilterJointImpl3D*>::Iterator entry = other->get_collision_exceptions().find(rid);
+		if (entry) {
+			memdelete(entry->value);
+			other->get_collision_exceptions().remove(entry);
+		}
+	}
+	bodies_with_exceptions.erase(p_body);
 }
 
 RID Box3DPhysicsServer3D::_resolve_area_rid(const RID& p_rid) const {
@@ -776,17 +798,52 @@ bool Box3DPhysicsServer3D::_body_is_axis_locked(const RID& p_body, PhysicsServer
 }
 
 void Box3DPhysicsServer3D::_body_add_collision_exception(const RID& p_body, const RID& p_excepted_body) {
-	// v1: full per-pair collision exception lists are a non-goal. The common single-group
-	// case is handled via b3Filter.groupIndex instead (see the plan's Non-goals section).
-	WARN_PRINT_ONCE("Box3D: per-pair collision exceptions are not implemented in this version; use collision layers/masks instead.");
+	Box3DBodyImpl3D* body = body_owner.get_or_null(p_body);
+	Box3DBodyImpl3D* excepted = body_owner.get_or_null(p_excepted_body);
+	ERR_FAIL_NULL(body);
+	ERR_FAIL_NULL(excepted);
+	ERR_FAIL_COND(body == excepted);
+	if (body->get_collision_exceptions().has(p_excepted_body)) {
+		return;
+	}
+
+	auto* joint = memnew(Box3DFilterJointImpl3D(body, excepted));
+	joint->rebuild();
+
+	// Godot records the exception on the requesting body only, matching GodotBody3D, even
+	// though the filter joint it backs stops collision in both directions.
+	body->get_collision_exceptions().insert(p_excepted_body, joint);
+	bodies_with_exceptions.insert(body);
 }
 
 void Box3DPhysicsServer3D::_body_remove_collision_exception(const RID& p_body, const RID& p_excepted_body) {
-	// See _body_add_collision_exception.
+	Box3DBodyImpl3D* body = body_owner.get_or_null(p_body);
+	ERR_FAIL_NULL(body);
+
+	HashMap<RID, Box3DFilterJointImpl3D*>::Iterator entry = body->get_collision_exceptions().find(p_excepted_body);
+	if (!entry) {
+		return;
+	}
+	Box3DFilterJointImpl3D* joint = entry->value;
+	body->get_collision_exceptions().remove(entry);
+	// Re-enabling first makes Box3D re-query the broad-phase, so a pair that is already
+	// overlapping regains a contact instead of staying interpenetrated.
+	joint->set_collision_disabled(false);
+	memdelete(joint);
+
+	if (body->get_collision_exceptions().is_empty()) {
+		bodies_with_exceptions.erase(body);
+	}
 }
 
 TypedArray<RID> Box3DPhysicsServer3D::_body_get_collision_exceptions(const RID& p_body) const {
-	return TypedArray<RID>();
+	TypedArray<RID> exceptions;
+	Box3DBodyImpl3D* body = body_owner.get_or_null(p_body);
+	ERR_FAIL_NULL_V(body, exceptions);
+	for (const KeyValue<RID, Box3DFilterJointImpl3D*>& entry : body->get_collision_exceptions()) {
+		exceptions.push_back(entry.key);
+	}
+	return exceptions;
 }
 
 void Box3DPhysicsServer3D::_body_set_max_contacts_reported(const RID& p_body, int32_t p_amount) {
@@ -1205,6 +1262,7 @@ void Box3DPhysicsServer3D::_free_rid(const RID& p_rid) {
 	}
 
 	if (Box3DBodyImpl3D* body = body_owner.get_or_null(p_rid)) {
+		_clear_collision_exceptions(body);
 		if (Box3DSpace3D* space = body->get_space()) {
 			space->unregister_body(body);
 		}

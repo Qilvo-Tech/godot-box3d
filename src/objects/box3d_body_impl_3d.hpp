@@ -3,6 +3,7 @@
 #include "box3d_shaped_object_impl_3d.hpp"
 
 #include <godot_cpp/classes/physics_server3d.hpp>
+#include <godot_cpp/templates/hash_map.hpp>
 #include <godot_cpp/templates/local_vector.hpp>
 #include <godot_cpp/variant/callable.hpp>
 
@@ -10,6 +11,7 @@
 
 using namespace godot;
 
+class Box3DFilterJointImpl3D;
 class Box3DPhysicsDirectBodyState3D;
 
 // One Godot contact point, flattened from a Box3D manifold point.
@@ -161,6 +163,11 @@ public:
 
 	void set_max_contacts_reported(int32_t p_count) { max_contacts_reported = p_count; }
 
+	// Bodies this one is excepted from colliding with, keyed by RID.
+	HashMap<RID, Box3DFilterJointImpl3D*>& get_collision_exceptions() { return collision_exceptions; }
+
+	const HashMap<RID, Box3DFilterJointImpl3D*>& get_collision_exceptions() const { return collision_exceptions; }
+
 	// Rebuilds the contact cache; manifold pointers are only valid until the next step.
 	void refresh_contacts();
 
@@ -224,6 +231,9 @@ private:
 	LocalVector<Box3DContactPoint3D> contacts;
 	// Reused every step so contact polling does not allocate in the physics loop.
 	LocalVector<b3ContactData> contact_pairs;
+
+	// Both bodies in a pair hold the same joint pointer; the server owns and frees it once.
+	HashMap<RID, Box3DFilterJointImpl3D*> collision_exceptions;
 
 	Box3DPhysicsDirectBodyState3D* direct_state = nullptr;
 };
