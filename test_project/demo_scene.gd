@@ -7,6 +7,7 @@ extends Node3D
 
 var _door: RigidBody3D
 var _door_swung: bool = false
+var _pendulum_joint: PinJoint3D
 
 
 func _ready() -> void:
@@ -22,6 +23,7 @@ func _ready() -> void:
 	_add_zero_gravity_well()
 	_add_gravity_orb()
 	_add_exception_pair()
+	_add_pendulum()
 
 
 func _add_camera() -> void:
@@ -181,6 +183,49 @@ func _on_area_body_entered(body: Node3D) -> void:
 
 func _on_area_body_exited(body: Node3D) -> void:
 	print("[Area] exited by: ", body.name)
+
+
+# A ball on a pin joint whose anchor is swept sideways every frame in _process.
+func _add_pendulum() -> void:
+	var anchor: StaticBody3D = StaticBody3D.new()
+	anchor.name = "PendulumAnchor"
+	anchor.position = Vector3(0, 7, -8)
+	var anchor_shape: CollisionShape3D = CollisionShape3D.new()
+	var anchor_box: BoxShape3D = BoxShape3D.new()
+	anchor_box.size = Vector3(0.3, 0.3, 0.3)
+	anchor_shape.shape = anchor_box
+	anchor.add_child(anchor_shape)
+	var anchor_mesh: MeshInstance3D = MeshInstance3D.new()
+	var anchor_box_mesh: BoxMesh = BoxMesh.new()
+	anchor_box_mesh.size = anchor_box.size
+	anchor_mesh.mesh = anchor_box_mesh
+	anchor.add_child(anchor_mesh)
+	add_child(anchor)
+
+	var ball: RigidBody3D = RigidBody3D.new()
+	ball.name = "PendulumBall"
+	ball.position = Vector3(0, 4, -8)
+	var ball_shape: CollisionShape3D = CollisionShape3D.new()
+	var sphere: SphereShape3D = SphereShape3D.new()
+	sphere.radius = 0.4
+	ball_shape.shape = sphere
+	ball.add_child(ball_shape)
+	var ball_mesh: MeshInstance3D = MeshInstance3D.new()
+	var sphere_mesh: SphereMesh = SphereMesh.new()
+	sphere_mesh.radius = sphere.radius
+	sphere_mesh.height = sphere.radius * 2.0
+	ball_mesh.mesh = sphere_mesh
+	var material: StandardMaterial3D = StandardMaterial3D.new()
+	material.albedo_color = Color(0.85, 0.4, 0.9)
+	ball_mesh.material_override = material
+	ball.add_child(ball_mesh)
+	add_child(ball)
+
+	_pendulum_joint = PinJoint3D.new()
+	_pendulum_joint.position = anchor.position
+	add_child(_pendulum_joint)
+	_pendulum_joint.node_a = _pendulum_joint.get_path_to(anchor)
+	_pendulum_joint.node_b = _pendulum_joint.get_path_to(ball)
 
 
 # Two overlapping boxes with a collision exception pass through each other, while a third
@@ -399,3 +444,8 @@ func _process(_delta: float) -> void:
 	if not _door_swung and Engine.get_physics_frames() > 30:
 		_door_swung = true
 		_door.apply_torque_impulse(Vector3(0, 3.0, 0))
+
+	# A stiff pin spring pumps energy if the anchor jumps, so sweep it slowly and gently.
+	if _pendulum_joint != null:
+		var sweep: float = sin(Engine.get_physics_frames() * 0.01) * 0.6
+		PhysicsServer3D.pin_joint_set_local_a(_pendulum_joint.get_rid(), Vector3(sweep, 0, 0))
