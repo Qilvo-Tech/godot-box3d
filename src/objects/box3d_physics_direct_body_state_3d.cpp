@@ -45,7 +45,8 @@ Vector3 Box3DPhysicsDirectBodyState3D::_get_center_of_mass_local() const {
 }
 
 Basis Box3DPhysicsDirectBodyState3D::_get_principal_inertia_axes() const {
-	return Basis();
+	// Box3D's inertia is always diagonal in body space, so the axes are the body rotation.
+	return body->get_transform().basis.orthonormalized();
 }
 
 double Box3DPhysicsDirectBodyState3D::_get_inverse_mass() const {
@@ -62,12 +63,12 @@ Vector3 Box3DPhysicsDirectBodyState3D::_get_inverse_inertia() const {
 }
 
 Basis Box3DPhysicsDirectBodyState3D::_get_inverse_inertia_tensor() const {
-	const Vector3 inv_inertia = _get_inverse_inertia();
-	Basis basis;
-	basis.set_column(0, Vector3(inv_inertia.x, 0, 0));
-	basis.set_column(1, Vector3(0, inv_inertia.y, 0));
-	basis.set_column(2, Vector3(0, 0, inv_inertia.z));
-	return basis;
+	// Callers multiply this against world-space vectors, so rotate the local diagonal into
+	// world space the way GodotBody3D does (tb * diag * tb transposed).
+	const Basis axes = _get_principal_inertia_axes();
+	Basis diagonal;
+	diagonal.scale(_get_inverse_inertia());
+	return axes * diagonal * axes.transposed();
 }
 
 void Box3DPhysicsDirectBodyState3D::_set_linear_velocity(const Vector3& p_velocity) {

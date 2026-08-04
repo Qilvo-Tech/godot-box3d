@@ -81,16 +81,14 @@ public:
 	AreaOverrides compute_area_overrides(Box3DBodyImpl3D* p_body) const;
 
 private:
-	struct PendingStateSync {
-		Box3DBodyImpl3D* body = nullptr;
-	};
-
 	struct PendingAreaEvent {
 		Callable callback;
 		PhysicsServer3D::AreaBodyStatus status = PhysicsServer3D::AREA_BODY_ADDED;
 		RID other_rid;
 		uint64_t other_instance_id = 0;
 	};
+
+	void _call_body_queries();
 
 	void _apply_area_overrides();
 
@@ -111,7 +109,6 @@ private:
 	HashSet<Box3DBodyImpl3D*> bodies;
 	HashSet<Box3DAreaImpl3D*> areas;
 
-	LocalVector<PendingStateSync> pending_state_syncs;
 	LocalVector<PendingAreaEvent> pending_area_events;
 
 	float last_step = 0.0f;

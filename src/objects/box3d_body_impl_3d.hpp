@@ -146,6 +146,10 @@ public:
 	// standard force integration is enabled, then clear the transient accumulators.
 	void pre_step();
 
+	bool needs_state_sync() const { return state_sync_pending; }
+
+	void set_needs_state_sync(bool p_needed) { state_sync_pending = p_needed; }
+
 	void set_state_sync_callback(const Callable& p_callable) { state_sync_callback = p_callable; }
 
 	const Callable& get_state_sync_callback() const { return state_sync_callback; }
@@ -223,6 +227,7 @@ private:
 	Vector3 applied_torque;
 
 	Callable state_sync_callback;
+	bool state_sync_pending = false;
 	Callable force_integration_callback;
 	Variant force_integration_userdata;
 
