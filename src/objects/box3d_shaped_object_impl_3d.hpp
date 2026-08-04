@@ -44,6 +44,10 @@ public:
 
 	Transform3D get_shape_transform(int32_t p_index) const;
 
+	b3ShapeId get_shape_id(int32_t p_index) const;
+
+	bool has_shape_id(int32_t p_index) const;
+
 	void set_shape_transform(int32_t p_index, const Transform3D& p_transform);
 
 	bool is_shape_disabled(int32_t p_index) const;

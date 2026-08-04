@@ -10,33 +10,38 @@ The structure of this extension is based on [godot-jolt](https://github.com/godo
 
 - Rigid, static, and kinematic bodies
 - Shapes: box, sphere, capsule, cylinder, convex polygon, concave polygon (trimesh), heightmap, and world boundary
-- Areas, including overlap events and gravity/damping overrides
+- Areas, including overlap events, gravity/damping overrides, priority ordering, and point gravity
 - Direct space state queries: ray casts, point and shape intersection, shape casts (`cast_motion`), `collide_shape`, and `rest_info`
 - `body_test_motion`, so `CharacterBody3D` and `move_and_slide()` work
-- Joints: pin, hinge, and slider
+- Contact monitoring, so `RigidBody3D` reports real contact points, normals, and impulses
+- Per-pair collision exceptions
+- Joints: pin, hinge, and slider (pin anchors can be moved after creation)
 - A small test project (`test_project/`) with demo and stress scenes
 
 ## What's left to do
 
 - Separation ray shapes
-- ConeTwist and Generic6DOF joints
+- ConeTwist joints
+- `Generic6DOFJoint3D` (Box3D has no per-axis lock/limit/motor constraint, so there is no faithful mapping; use `PinJoint3D`, `HingeJoint3D`, or `SliderJoint3D` instead)
 - `SoftBody3D`
-- Per-pair collision exceptions (use collision layers/masks for now)
-- Changing a `PinJoint3D` anchor after creation (recreate the joint instead)
+- Per-shape indices in query and contact results (multi-shape bodies always report shape 0)
 - More platforms and architectures (currently Linux, Windows, and macOS builds)
 - Performance benchmarking and tuning
 - Documentation
 
 ## Behavior differences
 
-- **`Area3D` does not detect trimesh or heightmap bodies.** In Box3D a concave shape
-  (`ConcavePolygonShape3D`) or `HeightMapShape3D` can never act as a sensor *visitor* —
-  by design, since testing an arbitrary mesh against a sensor is too expensive. So an
-  `Area3D` silently ignores a body whose shape is a trimesh or heightmap: no
-  `body_entered` / `body_exited` fires for it. This diverges from Godot's built-in
-  physics (and Jolt), which report such a body on the first physics frame. If you need a
-  body to be detected by an area, give it a convex shape. (A trimesh may still be used
-  *as* an `Area3D`'s own shape to detect convex bodies passing through it.)
+- **`Area3D` does not detect trimesh or heightmap bodies.** In Box3D a concave shape (`ConcavePolygonShape3D`) or `HeightMapShape3D` can never act as a sensor *visitor*, by design, since testing an arbitrary mesh against a sensor is too expensive.
+  So an `Area3D` silently ignores a body whose shape is a trimesh or heightmap: no `body_entered` / `body_exited` fires for it.
+  This diverges from Godot's built-in physics (and Jolt), which report such a body on the first physics frame.
+  If you need a body to be detected by an area, give it a convex shape. (A trimesh may still be used *as* an `Area3D`'s own shape to detect convex bodies passing through it.)
+
+- **`collide_shape()` reports contact points without penetration depth.** Box3D exposes GJK, which finds the closest points between two shapes but cannot measure how far they already overlap.
+  For a genuinely overlapping pair both returned points are the same witness point, so the pair's separation reads as zero, where Godot's built-in physics returns two points whose distance is the penetration depth.
+  Whether shapes overlap, which bodies they are, `max_results`, and `collision_mask` all behave normally, so use it to answer "is anything here, and roughly where" rather than "how deep".
+
+- **Shape queries need a convex query shape.** `intersect_shape`, `cast_motion`, `collide_shape`, `rest_info`, and `body_test_motion` build a point-cloud proxy of the shape being queried *with*, and trimesh, heightmap, and world-boundary shapes have no finite point cloud.
+  Passing one of those as the query shape returns no results. They work normally as targets in the world.
 
 ## Requirements
 

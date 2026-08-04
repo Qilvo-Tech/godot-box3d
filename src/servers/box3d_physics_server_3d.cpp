@@ -1094,7 +1094,7 @@ double Box3DPhysicsServer3D::_cone_twist_joint_get_param(const RID& p_joint, Phy
 }
 
 void Box3DPhysicsServer3D::_joint_make_generic_6dof(const RID& p_joint, const RID& p_body_a, const Transform3D& p_local_ref_a, const RID& p_body_b, const Transform3D& p_local_ref_b) {
-	ERR_FAIL_MSG("Box3D: Generic6DOFJoint3D is not supported in this version of the Box3D extension.");
+	ERR_FAIL_MSG("Box3D: Generic6DOFJoint3D is not supported; use PinJoint3D, HingeJoint3D, or SliderJoint3D instead.");
 }
 
 void Box3DPhysicsServer3D::_generic_6dof_joint_set_param(const RID& p_joint, Vector3::Axis p_axis, PhysicsServer3D::G6DOFJointAxisParam p_param, double p_value) {

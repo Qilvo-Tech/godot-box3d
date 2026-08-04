@@ -243,6 +243,16 @@ Transform3D Box3DShapedObjectImpl3D::get_shape_transform(int32_t p_index) const 
 	return shapes[p_index].get_transform();
 }
 
+b3ShapeId Box3DShapedObjectImpl3D::get_shape_id(int32_t p_index) const {
+	ERR_FAIL_INDEX_V(p_index, (int32_t)shapes.size(), b3_nullShapeId);
+	return shapes[p_index].get_shape_id();
+}
+
+bool Box3DShapedObjectImpl3D::has_shape_id(int32_t p_index) const {
+	ERR_FAIL_INDEX_V(p_index, (int32_t)shapes.size(), false);
+	return shapes[p_index].has_shape_id();
+}
+
 void Box3DShapedObjectImpl3D::set_shape_transform(int32_t p_index, const Transform3D& p_transform) {
 	ERR_FAIL_INDEX(p_index, (int32_t)shapes.size());
 	Box3DShapeInstance3D& instance = shapes[p_index];
