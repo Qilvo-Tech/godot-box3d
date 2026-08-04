@@ -33,8 +33,7 @@ func _run() -> void:
 	await physics_frame
 	await physics_frame
 
-	# Free fall, well clear of the ground: the count must be zero. This is the regression
-	# guard for reporting Box3D's contact capacity instead of the real contact count.
+	# Regression guard: the count was Box3D's contact capacity, not the real count.
 	var airborne: PhysicsDirectBodyState3D = PhysicsServer3D.body_get_direct_state(body.get_rid())
 	_check(airborne.get_contact_count() == 0, "no contacts are reported while airborne")
 
@@ -49,22 +48,35 @@ func _run() -> void:
 		_finish()
 		return
 
-	# Godot points the contact normal from the collider back toward this body, so a body
-	# resting on the ground reports +Y. Verified against Godot Physics, which reports
-	# (0, 1, 0) for this exact scene.
+	# Godot points the normal from the collider back toward the body, so resting reports +Y.
 	var normal: Vector3 = state.get_contact_local_normal(0)
 	_check(normal.dot(Vector3.UP) > 0.95, "contact normal points up, away from the ground")
 
 	var position: Vector3 = state.get_contact_local_position(0)
 	_check(absf(position.y) < 0.15, "contact position sits on the ground surface")
 
-	_check(state.get_contact_collider(0) == ground.get_rid(), "contact collider RID is the ground body")
-	_check(state.get_contact_collider_object(0) == ground, "contact collider object resolves to the ground node")
-	_check(state.get_contact_collider_id(0) == ground.get_instance_id(), "contact collider instance ID matches the ground")
-	_check(state.get_contact_impulse(0).length() > 0.0, "resting contact carries a nonzero impulse")
+	_check(
+		state.get_contact_collider(0) == ground.get_rid(),
+		"contact collider RID is the ground body",
+	)
+	_check(
+		state.get_contact_collider_object(0) == ground,
+		"contact collider object resolves to the ground node",
+	)
+	_check(
+		state.get_contact_collider_id(0) == ground.get_instance_id(),
+		"contact collider instance ID matches the ground",
+	)
+	_check(
+		state.get_contact_impulse(0).length() > 0.0,
+		"resting contact carries a nonzero impulse",
+	)
 
 	var collider_position: Vector3 = state.get_contact_collider_position(0)
-	_check(collider_position.distance_to(position) < 0.2, "collider contact point is near the local contact point")
+	_check(
+		collider_position.distance_to(position) < 0.2,
+		"collider contact point is near the local contact point",
+	)
 
 	_finish()
 

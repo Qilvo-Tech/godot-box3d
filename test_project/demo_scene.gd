@@ -180,8 +180,7 @@ func _on_area_body_exited(body: Node3D) -> void:
 	print("[Area] exited by: ", body.name)
 
 
-# Drops a body that reports its landing contacts, exercising the contact accessors on
-# PhysicsDirectBodyState3D (normal, position, impulse, and the resolved collider node).
+# Drops a body that prints its landing contacts.
 func _add_impact_reporter() -> void:
 	var body: RigidBody3D = RigidBody3D.new()
 	body.name = "ImpactReporter"
