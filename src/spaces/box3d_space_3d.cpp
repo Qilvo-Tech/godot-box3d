@@ -123,15 +123,12 @@ void Box3DSpace3D::step(float p_step) {
 	_pull_body_events();
 	_pull_sensor_events();
 
-	// Contact data is cached per body immediately after the step: b3ContactData manifold
-	// pointers reference internal solver memory that is only valid until the next step.
+	// Manifold pointers are only valid until the next step, so cache contacts now.
 	for (Box3DBodyImpl3D* body : bodies) {
 		body->refresh_contacts();
 	}
 
-	// Joint events are not drained into any callback pipeline. We still fetch both event
-	// buffers so any internal Box3D per-step bookkeeping tied to fetching is exercised
-	// consistently, though this is not strictly required by the API.
+	// Drained only so Box3D's per-step event bookkeeping stays consistent; joint events are unused.
 	b3World_GetContactEvents(world_id);
 	b3World_GetJointEvents(world_id);
 }

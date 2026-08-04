@@ -6,13 +6,13 @@
 #include <godot_cpp/templates/local_vector.hpp>
 #include <godot_cpp/variant/callable.hpp>
 
+#include <box3d/types.h>
+
 using namespace godot;
 
 class Box3DPhysicsDirectBodyState3D;
 
-// One Godot-facing contact point, flattened from a Box3D manifold point. Box3D reports
-// contacts per shape pair with up to four points per manifold (more for meshes), while
-// Godot's PhysicsDirectBodyState3D exposes a flat indexed list.
+// One Godot contact point, flattened from a Box3D manifold point.
 struct Box3DContactPoint3D {
 	Vector3 local_position;
 	Vector3 local_normal;
@@ -161,9 +161,7 @@ public:
 
 	void set_max_contacts_reported(int32_t p_count) { max_contacts_reported = p_count; }
 
-	// Rebuilds the contact cache from Box3D. Called once per step, after b3World_Step, so
-	// every PhysicsDirectBodyState3D contact accessor reads consistent data without
-	// re-querying (b3ContactData manifold pointers are only valid until the next step).
+	// Rebuilds the contact cache; manifold pointers are only valid until the next step.
 	void refresh_contacts();
 
 	const LocalVector<Box3DContactPoint3D>& get_contacts() const { return contacts; }
@@ -224,6 +222,8 @@ private:
 	int32_t max_contacts_reported = 0;
 
 	LocalVector<Box3DContactPoint3D> contacts;
+	// Reused every step so contact polling does not allocate in the physics loop.
+	LocalVector<b3ContactData> contact_pairs;
 
 	Box3DPhysicsDirectBodyState3D* direct_state = nullptr;
 };

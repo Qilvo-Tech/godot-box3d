@@ -171,8 +171,7 @@ Vector3 Box3DPhysicsDirectBodyState3D::_get_contact_impulse(int32_t p_index) con
 }
 
 int32_t Box3DPhysicsDirectBodyState3D::_get_contact_local_shape(int32_t p_index) const {
-	// Box3D shape userData does not currently carry a stable shape index, so multi-shape
-	// bodies always report shape 0, matching the direct space state queries.
+	// Shape userData carries no stable index yet, so multi-shape bodies always report 0.
 	return 0;
 }
 

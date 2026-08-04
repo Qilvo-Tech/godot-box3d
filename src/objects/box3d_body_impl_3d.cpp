@@ -377,30 +377,24 @@ void Box3DBodyImpl3D::set_constant_torque(const Vector3& p_torque) {
 
 void Box3DBodyImpl3D::refresh_contacts() {
 	contacts.clear();
-	// Godot signals contact monitoring purely through max_contacts_reported; there is no
-	// separate server-side enable flag.
+	// Godot has no separate contact-monitor enable call; max_contacts_reported is the signal.
 	if (max_contacts_reported <= 0 || !has_body_id()) {
 		return;
 	}
 
-	// Fetch every touching pair rather than capping by max_contacts_reported: that limit
-	// counts contact points, and one pair yields up to four points (more against a mesh),
-	// so capping pairs here would under-report. The flattened list is truncated below.
+	// max_contacts_reported counts points, not pairs, so fetch every pair and truncate below.
 	const int pair_capacity = b3Body_GetContactCapacity(body_id);
 	if (pair_capacity <= 0) {
 		return;
 	}
 
-	LocalVector<b3ContactData> pairs;
-	pairs.resize(pair_capacity);
-	// Returns the number actually written, which is what Godot's contact count needs; the
-	// capacity above is only an upper bound.
-	const int pair_count = b3Body_GetContactData(body_id, pairs.ptr(), pair_capacity);
+	contact_pairs.resize(pair_capacity);
+	const int pair_count = b3Body_GetContactData(body_id, contact_pairs.ptr(), pair_capacity);
 
 	const b3Vec3 self_center = b3Body_GetWorldCenterOfMass(body_id);
 
 	for (int i = 0; i < pair_count && (int32_t)contacts.size() < max_contacts_reported; i++) {
-		const b3ContactData& pair = pairs[i];
+		const b3ContactData& pair = contact_pairs[i];
 		if (!b3Shape_IsValid(pair.shapeIdA) || !b3Shape_IsValid(pair.shapeIdB)) {
 			continue;
 		}
@@ -411,8 +405,7 @@ void Box3DBodyImpl3D::refresh_contacts() {
 		const bool self_is_a = object_a == this;
 		const b3BodyId other_id = self_is_a ? body_b : body_a;
 
-		// Areas are backed by kinematic bodies but are not collision colliders; they are a
-		// sibling class, so dynamic_cast is required (a static_cast would yield garbage).
+		// Areas share the userData slot as a sibling class, so a static_cast would yield garbage.
 		auto* other = dynamic_cast<Box3DBodyImpl3D*>(
 				static_cast<Box3DShapedObjectImpl3D*>(b3Body_GetUserData(other_id)));
 
@@ -420,9 +413,7 @@ void Box3DBodyImpl3D::refresh_contacts() {
 
 		for (int m = 0; m < pair.manifoldCount && (int32_t)contacts.size() < max_contacts_reported; m++) {
 			const b3Manifold& manifold = pair.manifolds[m];
-			// Box3D's manifold normal points from shape A to shape B. Godot reports the
-			// normal pointing from the collider back toward this body (GodotBody3D gives
-			// body A -normal and body B +normal), so the sense is flipped from Box3D's.
+			// Godot points the normal from the collider back toward this body, opposite Box3D's A to B.
 			const Vector3 normal = self_is_a
 					? -b3_to_godot(manifold.normal)
 					: b3_to_godot(manifold.normal);
@@ -430,21 +421,19 @@ void Box3DBodyImpl3D::refresh_contacts() {
 			for (int p = 0; p < manifold.pointCount && (int32_t)contacts.size() < max_contacts_reported; p++) {
 				const b3ManifoldPoint& point = manifold.points[p];
 
-				Box3DContactPoint3D contact;
-				// Anchors are relative to each body's center of mass, in world space.
-				const b3Vec3 self_anchor = self_is_a ? point.anchorA : point.anchorB;
-				const b3Vec3 other_anchor = self_is_a ? point.anchorB : point.anchorA;
-				const Vector3 self_point = b3_to_godot(b3Add(self_center, self_anchor));
-				const Vector3 other_point = b3_to_godot(b3Add(other_center, other_anchor));
+				// Anchors are relative to each body's center of mass.
+				const b3Vec3 self_point = b3Add(self_center, self_is_a ? point.anchorA : point.anchorB);
+				const b3Vec3 other_point = b3Add(other_center, self_is_a ? point.anchorB : point.anchorA);
 
-				contact.local_position = self_point;
+				Box3DContactPoint3D contact;
+				contact.local_position = b3_to_godot(self_point);
 				contact.local_normal = normal;
 				// totalNormalImpulse covers every sub-step; normalImpulse is only the last.
 				contact.impulse = normal * (real_t)point.totalNormalImpulse;
-				contact.local_velocity = b3_to_godot(b3Body_GetWorldPointVelocity(body_id, b3Add(self_center, self_anchor)));
-				contact.collider_position = other_point;
+				contact.local_velocity = b3_to_godot(b3Body_GetWorldPointVelocity(body_id, self_point));
+				contact.collider_position = b3_to_godot(other_point);
 				if (other != nullptr) {
-					contact.collider_velocity = b3_to_godot(b3Body_GetWorldPointVelocity(other_id, b3Add(other_center, other_anchor)));
+					contact.collider_velocity = b3_to_godot(b3Body_GetWorldPointVelocity(other_id, other_point));
 					contact.collider_rid = other->get_rid();
 					contact.collider_instance_id = other->get_instance_id();
 				}
