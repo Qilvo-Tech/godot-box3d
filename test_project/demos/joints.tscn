@@ -1,0 +1,150 @@
+[gd_scene format=3 uid="uid://itg6rtnhftos"]
+
+[ext_resource type="PackedScene" path="res://common/demo_stage.tscn" id="1_stage"]
+[ext_resource type="PackedScene" path="res://common/orbit_camera.tscn" id="2_cam"]
+[ext_resource type="PackedScene" path="res://common/demo_hud.tscn" id="3_hud"]
+[ext_resource type="Script" path="res://demos/joints.gd" id="4_script"]
+
+[sub_resource type="StandardMaterial3D" id="AnchorMat"]
+albedo_color = Color(0.35, 0.36, 0.4, 1)
+
+[sub_resource type="StandardMaterial3D" id="DoorMat"]
+albedo_color = Color(0.8, 0.45, 0.3, 1)
+
+[sub_resource type="StandardMaterial3D" id="BobMat"]
+albedo_color = Color(0.5, 0.75, 0.9, 1)
+
+[sub_resource type="StandardMaterial3D" id="SlideMat"]
+albedo_color = Color(0.6, 0.85, 0.5, 1)
+
+[sub_resource type="BoxShape3D" id="AnchorShape"]
+size = Vector3(0.3, 0.3, 0.3)
+
+[sub_resource type="BoxMesh" id="AnchorMesh"]
+size = Vector3(0.3, 0.3, 0.3)
+
+[sub_resource type="BoxShape3D" id="DoorShape"]
+size = Vector3(2, 2.4, 0.12)
+
+[sub_resource type="BoxMesh" id="DoorMesh"]
+size = Vector3(2, 2.4, 0.12)
+
+[sub_resource type="SphereShape3D" id="BobShape"]
+radius = 0.4
+
+[sub_resource type="SphereMesh" id="BobMesh"]
+radius = 0.4
+height = 0.8
+
+[sub_resource type="BoxShape3D" id="SlideShape"]
+size = Vector3(0.8, 0.8, 0.8)
+
+[sub_resource type="BoxMesh" id="SlideMesh"]
+size = Vector3(0.8, 0.8, 0.8)
+
+[sub_resource type="CylinderMesh" id="RailMesh"]
+top_radius = 0.06
+bottom_radius = 0.06
+height = 4.4
+
+[node name="Joints" type="Node3D" node_paths=PackedStringArray("hud", "pendulum_joint", "door", "slider_box")]
+script = ExtResource("4_script")
+description = "Left: a motorised hinge swinging a door. Middle: a pin joint whose anchor sweeps sideways every frame. Right: a prismatic slider driven between its limits."
+hud = NodePath("DemoHud")
+pendulum_joint = NodePath("PendulumJoint")
+door = NodePath("Door")
+slider_box = NodePath("SliderBox")
+
+[node name="Stage" parent="." instance=ExtResource("1_stage")]
+
+[node name="OrbitCamera" parent="." instance=ExtResource("2_cam")]
+transform = Transform3D(1, 0, 0, 0, 0.927, 0.375, 0, -0.375, 0.927, 0, 3, 0)
+
+[node name="DemoHud" parent="." instance=ExtResource("3_hud")]
+
+[node name="DoorAnchor" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 2.6, 0)
+
+[node name="Collision" type="CollisionShape3D" parent="DoorAnchor"]
+shape = SubResource("AnchorShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="DoorAnchor"]
+mesh = SubResource("AnchorMesh")
+material_override = SubResource("AnchorMat")
+
+[node name="Door" type="RigidBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 2.6, 0)
+gravity_scale = 0.0
+
+[node name="Collision" type="CollisionShape3D" parent="Door"]
+shape = SubResource("DoorShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="Door"]
+mesh = SubResource("DoorMesh")
+material_override = SubResource("DoorMat")
+
+[node name="DoorHinge" type="HingeJoint3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, -4, 2.6, 0)
+node_a = NodePath("../DoorAnchor")
+node_b = NodePath("../Door")
+"motor/enable" = true
+"motor/target_velocity" = 1.2
+"motor/max_impulse" = 512.0
+
+[node name="PendulumAnchor" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, 0)
+
+[node name="Collision" type="CollisionShape3D" parent="PendulumAnchor"]
+shape = SubResource("AnchorShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="PendulumAnchor"]
+mesh = SubResource("AnchorMesh")
+material_override = SubResource("AnchorMat")
+
+[node name="PendulumBob" type="RigidBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+
+[node name="Collision" type="CollisionShape3D" parent="PendulumBob"]
+shape = SubResource("BobShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="PendulumBob"]
+mesh = SubResource("BobMesh")
+material_override = SubResource("BobMat")
+
+[node name="PendulumJoint" type="PinJoint3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, 0)
+node_a = NodePath("../PendulumAnchor")
+node_b = NodePath("../PendulumBob")
+
+[node name="SliderAnchor" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 3.5, 0)
+
+[node name="Collision" type="CollisionShape3D" parent="SliderAnchor"]
+shape = SubResource("AnchorShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="SliderAnchor"]
+mesh = SubResource("AnchorMesh")
+material_override = SubResource("AnchorMat")
+
+[node name="SliderRail" type="MeshInstance3D" parent="."]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 4, 3.5, 0)
+mesh = SubResource("RailMesh")
+material_override = SubResource("AnchorMat")
+
+[node name="SliderBox" type="RigidBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 3.5, 0)
+gravity_scale = 0.0
+
+[node name="Collision" type="CollisionShape3D" parent="SliderBox"]
+shape = SubResource("SlideShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="SliderBox"]
+mesh = SubResource("SlideMesh")
+material_override = SubResource("SlideMat")
+
+[node name="BoxSlider" type="SliderJoint3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 3.5, 0)
+node_a = NodePath("../SliderAnchor")
+node_b = NodePath("../SliderBox")
+"linear_limit/upper_distance" = 2.0
+"linear_limit/lower_distance" = -2.0

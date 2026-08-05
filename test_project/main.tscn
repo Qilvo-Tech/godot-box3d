@@ -1,0 +1,49 @@
+[gd_scene format=3 uid="uid://itg6rrtar0vs"]
+
+[ext_resource type="Theme" path="res://common/demo_theme.tres" id="1_theme"]
+[ext_resource type="Script" path="res://main.gd" id="2_hub"]
+
+[node name="Main" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = ExtResource("1_theme")
+script = ExtResource("2_hub")
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 28
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 28
+
+[node name="Column" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="Margin/Column"]
+layout_mode = 2
+theme_type_variation = &"DemoTitle"
+text = "godot-box3d demos"
+
+[node name="BackendLabel" type="Label" parent="Margin/Column"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Spacer" type="Control" parent="Margin/Column"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 12)
+
+[node name="Buttons" type="VBoxContainer" parent="Margin/Column"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_constants/separation = 6
+
+[node name="Hint" type="Label" parent="Margin/Column"]
+layout_mode = 2
+text = "Esc returns here from any demo."

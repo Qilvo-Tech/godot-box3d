@@ -16,7 +16,7 @@ The structure of this extension is based on [godot-jolt](https://github.com/godo
 - Contact monitoring, so `RigidBody3D` reports real contact points, normals, and impulses
 - Per-pair collision exceptions
 - Joints: pin, hinge, and slider (pin anchors can be moved after creation)
-- A small test project (`test_project/`) with demo and stress scenes
+- A test project (`test_project/`) with a demo hub covering shapes, joints, areas, contacts, collision exceptions, and trimesh, plus a spawn benchmark and 18 headless regression tests
 
 ## What's left to do
 

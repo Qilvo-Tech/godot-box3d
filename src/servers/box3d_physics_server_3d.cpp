@@ -966,25 +966,36 @@ double Box3DPhysicsServer3D::_pin_joint_get_param(const RID& p_joint, PhysicsSer
 
 void Box3DPhysicsServer3D::_pin_joint_set_local_a(const RID& p_joint, const Vector3& p_local_a) {
 	auto* joint = dynamic_cast<Box3DPinJointImpl3D*>(joint_owner.get_or_null(p_joint));
-	ERR_FAIL_NULL(joint);
+	// PinJoint3D writes its anchors before naming its bodies, so the joint may not exist
+	// yet; _joint_make_pin receives the same anchors and applies them.
+	if (joint == nullptr) {
+		return;
+	}
 	joint->set_local_frame_a(Transform3D(joint->get_local_frame_a().basis, p_local_a));
 }
 
 Vector3 Box3DPhysicsServer3D::_pin_joint_get_local_a(const RID& p_joint) const {
 	auto* joint = dynamic_cast<Box3DPinJointImpl3D*>(joint_owner.get_or_null(p_joint));
-	ERR_FAIL_NULL_V(joint, Vector3());
+	if (joint == nullptr) {
+		return Vector3();
+	}
 	return joint->get_local_frame_a().origin;
 }
 
 void Box3DPhysicsServer3D::_pin_joint_set_local_b(const RID& p_joint, const Vector3& p_local_b) {
 	auto* joint = dynamic_cast<Box3DPinJointImpl3D*>(joint_owner.get_or_null(p_joint));
-	ERR_FAIL_NULL(joint);
+	// See _pin_joint_set_local_a.
+	if (joint == nullptr) {
+		return;
+	}
 	joint->set_local_frame_b(Transform3D(joint->get_local_frame_b().basis, p_local_b));
 }
 
 Vector3 Box3DPhysicsServer3D::_pin_joint_get_local_b(const RID& p_joint) const {
 	auto* joint = dynamic_cast<Box3DPinJointImpl3D*>(joint_owner.get_or_null(p_joint));
-	ERR_FAIL_NULL_V(joint, Vector3());
+	if (joint == nullptr) {
+		return Vector3();
+	}
 	return joint->get_local_frame_b().origin;
 }
 

@@ -45,13 +45,13 @@ printf '%s\n' 'res://addons/godot-box3d/godot-box3d.gdextension' > "$godot_metad
 backend_test="backend_activation_test.gd"
 
 printf '\n== %s ==\n' "$backend_test"
-"$godot_bin" --headless --path "$repo_root/test_project" --script "res://$backend_test"
+"$godot_bin" --headless --path "$repo_root/test_project" --script "res://tests/$backend_test"
 
-for test_path in "$repo_root"/test_project/*_test.gd; do
+for test_path in "$repo_root"/test_project/tests/*_test.gd; do
 	test_script="${test_path##*/}"
 	if [[ "$test_script" == "$backend_test" ]]; then
 		continue
 	fi
 	printf '\n== %s ==\n' "$test_script"
-	"$godot_bin" --headless --path "$repo_root/test_project" --script "res://$test_script"
+	"$godot_bin" --headless --path "$repo_root/test_project" --script "res://tests/$test_script"
 done
