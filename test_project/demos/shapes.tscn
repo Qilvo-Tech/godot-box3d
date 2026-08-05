@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" path="res://common/orbit_camera.tscn" id="2_cam"]
 [ext_resource type="PackedScene" path="res://common/demo_hud.tscn" id="3_hud"]
 [ext_resource type="Script" path="res://common/demo_base.gd" id="4_base"]
+[ext_resource type="PackedScene" path="res://common/demo_label.tscn" id="5_label"]
 
 [sub_resource type="StandardMaterial3D" id="Mat_1"]
 albedo_color = Color(0.85, 0.4, 0.35, 1)
@@ -78,6 +79,10 @@ shape = SubResource("BoxShape_1")
 mesh = SubResource("BoxMesh_1")
 material_override = SubResource("Mat_1")
 
+[node name="Label" parent="BoxBody" instance=ExtResource("5_label")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+text = "BoxShape3D"
+
 [node name="SphereBody" type="RigidBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.25, 7, 0)
 
@@ -87,6 +92,10 @@ shape = SubResource("SphereShape_1")
 [node name="Mesh" type="MeshInstance3D" parent="SphereBody"]
 mesh = SubResource("SphereMesh_1")
 material_override = SubResource("Mat_2")
+
+[node name="Label" parent="SphereBody" instance=ExtResource("5_label")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+text = "SphereShape3D"
 
 [node name="CapsuleBody" type="RigidBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8, 0)
@@ -98,6 +107,10 @@ shape = SubResource("CapsuleShape_1")
 mesh = SubResource("CapsuleMesh_1")
 material_override = SubResource("Mat_3")
 
+[node name="Label" parent="CapsuleBody" instance=ExtResource("5_label")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+text = "CapsuleShape3D"
+
 [node name="CylinderBody" type="RigidBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.25, 7, 0)
 
@@ -108,6 +121,10 @@ shape = SubResource("CylShape_1")
 mesh = SubResource("CylMesh_1")
 material_override = SubResource("Mat_4")
 
+[node name="Label" parent="CylinderBody" instance=ExtResource("5_label")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+text = "CylinderShape3D"
+
 [node name="ConvexBody" type="RigidBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.5, 6, 0)
 
@@ -117,3 +134,7 @@ shape = SubResource("ConvexShape_1")
 [node name="Mesh" type="MeshInstance3D" parent="ConvexBody"]
 mesh = SubResource("PrismMesh_1")
 material_override = SubResource("Mat_5")
+
+[node name="Label" parent="ConvexBody" instance=ExtResource("5_label")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+text = "ConvexPolygonShape3D"

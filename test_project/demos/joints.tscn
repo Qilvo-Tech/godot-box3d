@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" path="res://common/orbit_camera.tscn" id="2_cam"]
 [ext_resource type="PackedScene" path="res://common/demo_hud.tscn" id="3_hud"]
 [ext_resource type="Script" path="res://demos/joints.gd" id="4_script"]
+[ext_resource type="PackedScene" path="res://common/demo_label.tscn" id="9_label"]
 
 [sub_resource type="StandardMaterial3D" id="AnchorMat"]
 albedo_color = Color(0.35, 0.36, 0.4, 1)
@@ -83,6 +84,10 @@ shape = SubResource("DoorShape")
 mesh = SubResource("DoorMesh")
 material_override = SubResource("DoorMat")
 
+[node name="Label" parent="Door" instance=ExtResource("9_label")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
+text = "HingeJoint3D (motorised)"
+
 [node name="DoorHinge" type="HingeJoint3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, -4, 2.6, 0)
 node_a = NodePath("../DoorAnchor")
@@ -110,6 +115,10 @@ shape = SubResource("BobShape")
 [node name="Mesh" type="MeshInstance3D" parent="PendulumBob"]
 mesh = SubResource("BobMesh")
 material_override = SubResource("BobMat")
+
+[node name="Label" parent="PendulumBob" instance=ExtResource("9_label")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+text = "PinJoint3D (moving anchor)"
 
 [node name="PendulumJoint" type="PinJoint3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, 0)
@@ -141,6 +150,10 @@ shape = SubResource("SlideShape")
 [node name="Mesh" type="MeshInstance3D" parent="SliderBox"]
 mesh = SubResource("SlideMesh")
 material_override = SubResource("SlideMat")
+
+[node name="Label" parent="SliderBox" instance=ExtResource("9_label")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+text = "SliderJoint3D"
 
 [node name="BoxSlider" type="SliderJoint3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 3.5, 0)

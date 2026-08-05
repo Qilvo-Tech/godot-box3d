@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" path="res://common/orbit_camera.tscn" id="2_cam"]
 [ext_resource type="PackedScene" path="res://common/demo_hud.tscn" id="3_hud"]
 [ext_resource type="Script" path="res://common/demo_base.gd" id="4_base"]
+[ext_resource type="PackedScene" path="res://common/demo_label.tscn" id="9_label"]
 
 [sub_resource type="PlaneMesh" id="RampMesh"]
 size = Vector2(9, 9)
@@ -46,6 +47,10 @@ shape = SubResource("RampShape")
 [node name="Mesh" type="MeshInstance3D" parent="Ramp"]
 mesh = SubResource("RampMesh")
 material_override = SubResource("RampMat")
+
+[node name="Label" parent="Ramp" instance=ExtResource("9_label")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0)
+text = "ConcavePolygonShape3D (trimesh)"
 
 [node name="Crate1" type="RigidBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 6, -1)

@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" path="res://common/orbit_camera.tscn" id="2_cam"]
 [ext_resource type="PackedScene" path="res://common/demo_hud.tscn" id="3_hud"]
 [ext_resource type="Script" path="res://demos/areas.gd" id="4_script"]
+[ext_resource type="PackedScene" path="res://common/demo_label.tscn" id="9_label"]
 
 [sub_resource type="BoxShape3D" id="WellShape"]
 size = Vector3(5, 11, 5)
@@ -67,6 +68,10 @@ shape = SubResource("WellShape")
 mesh = SubResource("WellMesh")
 material_override = SubResource("WellMat")
 
+[node name="Label" parent="ZeroGravityWell" instance=ExtResource("9_label")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.2, 0)
+text = "Area3D: gravity REPLACE 0 + damping"
+
 [node name="WellBall1" type="RigidBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 10, 0)
 
@@ -111,6 +116,10 @@ shape = SubResource("OrbShape")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
 mesh = SubResource("OrbMarkerMesh")
 material_override = SubResource("OrbMat")
+
+[node name="Label" parent="GravityOrb" instance=ExtResource("9_label")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7.0, 0)
+text = "Area3D: point gravity (offset centre)"
 
 [node name="OrbBall1" type="RigidBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.5, 7, 0)

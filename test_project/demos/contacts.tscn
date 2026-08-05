@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" path="res://common/orbit_camera.tscn" id="2_cam"]
 [ext_resource type="PackedScene" path="res://common/demo_hud.tscn" id="3_hud"]
 [ext_resource type="Script" path="res://demos/contacts.gd" id="4_script"]
+[ext_resource type="PackedScene" path="res://common/demo_label.tscn" id="9_label"]
 
 [sub_resource type="BoxShape3D" id="DropShape"]
 size = Vector3(1.2, 1.2, 1.2)
@@ -52,6 +53,10 @@ shape = SubResource("DropShape")
 [node name="Mesh" type="MeshInstance3D" parent="Reporter"]
 mesh = SubResource("DropMesh")
 material_override = SubResource("DropMat")
+
+[node name="Label" parent="Reporter" instance=ExtResource("9_label")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+text = "contact_monitor"
 
 [node name="Markers" type="Node3D" parent="."]
 
