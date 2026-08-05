@@ -44,14 +44,30 @@ printf '%s\n' 'res://addons/godot-box3d/godot-box3d.gdextension' > "$godot_metad
 
 backend_test="backend_activation_test.gd"
 
-printf '\n== %s ==\n' "$backend_test"
-"$godot_bin" --headless --path "$repo_root/test_project" --script "res://tests/$backend_test"
+run_test() {
+	local test_script="$1"
+	local test_output
+	local test_status=0
+
+	printf '\n== %s ==\n' "$test_script"
+	test_output="$("$godot_bin" --headless --path "$repo_root/test_project" --script "res://tests/$test_script" 2>&1)" || test_status=$?
+	printf '%s\n' "$test_output"
+
+	if (( test_status != 0 )); then
+		return "$test_status"
+	fi
+	if [[ "$test_output" == *"RIDs in Godot Box3D were found to not have been freed"* ]]; then
+		printf 'ERROR: %s leaked one or more Box3D RIDs.\n' "$test_script" >&2
+		return 1
+	fi
+}
+
+run_test "$backend_test"
 
 for test_path in "$repo_root"/test_project/tests/*_test.gd; do
 	test_script="${test_path##*/}"
 	if [[ "$test_script" == "$backend_test" ]]; then
 		continue
 	fi
-	printf '\n== %s ==\n' "$test_script"
-	"$godot_bin" --headless --path "$repo_root/test_project" --script "res://tests/$test_script"
+	run_test "$test_script"
 done
