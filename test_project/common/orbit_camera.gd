@@ -19,16 +19,16 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton:
-		var button: InputEventMouseButton = event
-		if button.button_index == MOUSE_BUTTON_RIGHT:
-			_dragging = button.pressed
-		elif button.button_index == MOUSE_BUTTON_WHEEL_UP and button.pressed:
-			distance = maxf(min_distance, distance - zoom_step)
-			_apply()
-		elif button.button_index == MOUSE_BUTTON_WHEEL_DOWN and button.pressed:
-			distance = minf(max_distance, distance + zoom_step)
-			_apply()
+	if event.is_action_pressed("demo_orbit"):
+		_dragging = true
+	elif event.is_action_released("demo_orbit"):
+		_dragging = false
+	elif event.is_action_pressed("demo_zoom_in"):
+		distance = maxf(min_distance, distance - zoom_step)
+		_apply()
+	elif event.is_action_pressed("demo_zoom_out"):
+		distance = minf(max_distance, distance + zoom_step)
+		_apply()
 	elif event is InputEventMouseMotion and _dragging:
 		var motion: InputEventMouseMotion = event
 		yaw_degrees -= motion.relative.x * orbit_speed

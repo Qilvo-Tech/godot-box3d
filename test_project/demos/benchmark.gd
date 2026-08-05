@@ -17,50 +17,47 @@ var _kind: SpawnKind = SpawnKind.MIXED
 var _smoothed_step_ms: float = 0.0
 
 
-func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_accept"):
-		get_viewport().set_input_as_handled()
-		_spawn_wave()
-		return
-	if event is InputEventKey and event.pressed and not event.echo:
-		var key_event: InputEventKey = event
-		match key_event.keycode:
-			KEY_R:
-				_clear()
-				return
-			KEY_1:
-				_kind = SpawnKind.BOXES
-				return
-			KEY_2:
-				_kind = SpawnKind.SPHERES
-				return
-			KEY_3:
-				_kind = SpawnKind.MIXED
-				return
-	super._unhandled_input(event)
-
-
 func _process(_delta: float) -> void:
 	var step_ms: float = Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0
 	_smoothed_step_ms = lerpf(_smoothed_step_ms, step_ms, 0.1)
-	set_status(
-		"Bodies: %d    FPS: %.1f    Physics: %.2f ms    Mode: %s\n"
-		% [
-			spawn_root.get_child_count(),
-			Engine.get_frames_per_second(),
-			_smoothed_step_ms,
-			SpawnKind.keys()[_kind],
-		]
-		+ "[Space] spawn %d    [R] reset    [1] boxes [2] spheres [3] mixed" % WAVE_SIZE
-	)
+	set_status("Bodies: %d    FPS: %.1f    Physics: %.2f ms    Mode: %s" % [
+		spawn_root.get_child_count(),
+		Engine.get_frames_per_second(),
+		_smoothed_step_ms,
+		SpawnKind.keys()[_kind],
+	])
+
+
+func restart() -> void:
+	_clear()
+
+
+func _action_buttons() -> Array[Array]:
+	return [
+		["demo_action", "Spawn %d" % WAVE_SIZE],
+		["demo_mode_1", "Boxes"],
+		["demo_mode_2", "Spheres"],
+		["demo_mode_3", "Mixed"],
+	]
+
+
+func _on_action(action: String) -> void:
+	match action:
+		"demo_action":
+			_spawn_wave()
+		"demo_mode_1":
+			_kind = SpawnKind.BOXES
+		"demo_mode_2":
+			_kind = SpawnKind.SPHERES
+		"demo_mode_3":
+			_kind = SpawnKind.MIXED
 
 
 func _spawn_wave() -> void:
 	if spawn_root.get_child_count() + WAVE_SIZE > BODY_CAP:
 		return
 	for i in WAVE_SIZE:
-		var scene: PackedScene = _scene_for(i)
-		var body: RigidBody3D = scene.instantiate()
+		var body: RigidBody3D = _scene_for(i).instantiate()
 		spawn_root.add_child(body)
 		var column: int = i % WAVE_COLUMNS
 		var row: int = i / WAVE_COLUMNS

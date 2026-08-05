@@ -9,14 +9,6 @@ const DROP_HEIGHT: float = 6.0
 var _peak_impulse: float = 0.0
 
 
-func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_accept"):
-		get_viewport().set_input_as_handled()
-		_reset_drop()
-		return
-	super._unhandled_input(event)
-
-
 func _physics_process(_delta: float) -> void:
 	if reporter == null or markers == null:
 		return
@@ -35,14 +27,16 @@ func _physics_process(_delta: float) -> void:
 		impulse = state.get_contact_impulse(0).length()
 		_peak_impulse = maxf(_peak_impulse, impulse)
 
-	set_status("Contacts: %d    Impulse: %.2f    Peak: %.2f    [Space] drop again" % [
-		count,
-		impulse,
-		_peak_impulse,
-	])
+	set_status("Contacts: %d    Impulse: %.2f    Peak: %.2f" % [count, impulse, _peak_impulse])
 
 
-func _reset_drop() -> void:
+func _action_buttons() -> Array[Array]:
+	return [["demo_action", "Drop"]]
+
+
+func _on_action(action: String) -> void:
+	if action != "demo_action":
+		return
 	_peak_impulse = 0.0
 	PhysicsServer3D.body_set_state(
 		reporter.get_rid(),

@@ -1,8 +1,10 @@
 [gd_scene format=3 uid="uid://b3ddemohud001"]
 
 [ext_resource type="Theme" path="res://common/demo_theme.tres" id="1_theme"]
+[ext_resource type="Script" path="res://common/demo_hud.gd" id="2_hud"]
 
 [node name="DemoHud" type="CanvasLayer"]
+script = ExtResource("2_hud")
 
 [node name="Root" type="MarginContainer" parent="."]
 anchors_preset = 15
@@ -14,27 +16,67 @@ theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 12
 
-[node name="Column" type="VBoxContainer" parent="Root"]
+[node name="Rows" type="VBoxContainer" parent="Root"]
 layout_mode = 2
-size_flags_vertical = 0
 
-[node name="TitleLabel" type="Label" parent="Root/Column"]
+[node name="TopRow" type="HBoxContainer" parent="Root/Rows"]
+layout_mode = 2
+
+[node name="Info" type="VBoxContainer" parent="Root/Rows/TopRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="TitleLabel" type="Label" parent="Root/Rows/TopRow/Info"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"DemoTitle"
 text = "Demo"
 
-[node name="DescriptionLabel" type="Label" parent="Root/Column"]
+[node name="DescriptionLabel" type="Label" parent="Root/Rows/TopRow/Info"]
 unique_name_in_owner = true
 layout_mode = 2
+custom_minimum_size = Vector2(560, 0)
 autowrap_mode = 2
-custom_minimum_size = Vector2(520, 0)
 
-[node name="StatusLabel" type="Label" parent="Root/Column"]
+[node name="StatusLabel" type="Label" parent="Root/Rows/TopRow/Info"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"DemoStatus"
 
-[node name="HintLabel" type="Label" parent="Root/Column"]
+[node name="BackendBox" type="VBoxContainer" parent="Root/Rows/TopRow"]
 layout_mode = 2
-text = "Right-drag orbit  |  Wheel zoom  |  Esc back to menu"
+size_flags_horizontal = 8
+size_flags_vertical = 0
+
+[node name="BackendCaption" type="Label" parent="Root/Rows/TopRow/BackendBox"]
+layout_mode = 2
+text = "Physics backend"
+
+[node name="BackendPicker" type="OptionButton" parent="Root/Rows/TopRow/BackendBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Spacer" type="Control" parent="Root/Rows"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Controls" type="HBoxContainer" parent="Root/Rows"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BackButton" type="Button" parent="Root/Rows/Controls"]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+text = "Back"
+
+[node name="RestartButton" type="Button" parent="Root/Rows/Controls"]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+text = "Restart"
+
+[node name="HintLabel" type="Label" parent="Root/Rows/Controls"]
+layout_mode = 2
+text = "   Right-drag orbit  |  Wheel zoom"

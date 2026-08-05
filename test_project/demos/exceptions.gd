@@ -14,22 +14,23 @@ func _ready() -> void:
 	_set_exception(true)
 
 
-func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_accept"):
-		get_viewport().set_input_as_handled()
-		_set_exception(not _exception_active)
-		return
-	super._unhandled_input(event)
-
-
 func _physics_process(_delta: float) -> void:
 	if excepted_a == null or control_a == null:
 		return
-	set_status("Exception: %s    Blue gap: %.2f    Orange gap: %.2f    [Space] toggle" % [
+	set_status("Exception: %s    Blue gap: %.2f    Orange gap: %.2f" % [
 		"ON" if _exception_active else "OFF",
 		excepted_a.global_position.distance_to(excepted_b.global_position),
 		control_a.global_position.distance_to(control_b.global_position),
 	])
+
+
+func _action_buttons() -> Array[Array]:
+	return [["demo_action", "Toggle exception"]]
+
+
+func _on_action(action: String) -> void:
+	if action == "demo_action":
+		_set_exception(not _exception_active)
 
 
 func _set_exception(enabled: bool) -> void:
