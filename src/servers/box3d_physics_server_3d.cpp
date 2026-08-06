@@ -1368,5 +1368,22 @@ bool Box3DPhysicsServer3D::_is_flushing_queries() const {
 }
 
 int32_t Box3DPhysicsServer3D::_get_process_info(PhysicsServer3D::ProcessInfo p_process_info) {
-	return 0;
+	int32_t total = 0;
+	for (const Box3DSpace3D* space : active_spaces) {
+		const b3Counters counters = b3World_GetCounters(space->get_world_id());
+		switch (p_process_info) {
+			case PhysicsServer3D::INFO_ACTIVE_OBJECTS:
+				total += counters.bodyCount;
+				break;
+			case PhysicsServer3D::INFO_COLLISION_PAIRS:
+				total += counters.contactCount;
+				break;
+			case PhysicsServer3D::INFO_ISLAND_COUNT:
+				total += counters.islandCount;
+				break;
+			default:
+				break;
+		}
+	}
+	return total;
 }

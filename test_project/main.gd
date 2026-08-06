@@ -12,7 +12,7 @@ const DEMOS: Array[Dictionary] = [
 ]
 const BACKEND_SETTING: String = "physics/3d/physics_engine"
 ## Dummy runs no simulation, so it is never a useful comparison.
-const HIDDEN_BACKENDS: PackedStringArray = PackedStringArray(["Dummy"])
+const HIDDEN_BACKENDS: Array[String] = ["Dummy", "DEFAULT"]
 
 @onready var _buttons: VBoxContainer = %Buttons
 @onready var _backend_picker: OptionButton = %BackendPicker
@@ -40,9 +40,9 @@ func _populate_backends() -> void:
 	for property in ProjectSettings.get_property_list():
 		if property["name"] != BACKEND_SETTING:
 			continue
-		for name in String(property["hint_string"]).split(","):
-			if not HIDDEN_BACKENDS.has(name):
-				_backends.append(name)
+		for backend in String(property["hint_string"]).split(","):
+			if not HIDDEN_BACKENDS.has(backend):
+				_backends.append(backend)
 		break
 
 	for i in _backends.size():
@@ -50,7 +50,7 @@ func _populate_backends() -> void:
 		if _backends[i] == current:
 			_backend_picker.select(i)
 
-	_backend_note.text = "Switching relaunches the project: the physics server is built once at startup."
+	_backend_note.text = "Switching relaunches: the physics server is built once at startup."
 
 
 # The physics server is created once at startup, so switching means relaunching.
