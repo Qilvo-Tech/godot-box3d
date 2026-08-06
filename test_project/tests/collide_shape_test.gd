@@ -8,7 +8,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	_make_box_body(Vector3(0, 0, 0), 4)
+	var excluded_body: StaticBody3D = _make_box_body(Vector3(0, 0, 0), 4)
 	_make_box_body(Vector3(1.2, 0, 0), 4)
 	_make_box_body(Vector3(2.4, 0, 0), 4)
 	_make_box_body(Vector3(0, 0, 20), 8)
@@ -37,6 +37,11 @@ func _run() -> void:
 
 	var other_layer: Array[Vector3] = state.collide_shape(_make_query(Vector3(0, 0, 20), 8), 8)
 	_check(not other_layer.is_empty(), "a matching collision mask still reports")
+
+	var excluded_query: PhysicsShapeQueryParameters3D = _make_query(Vector3(0, 0, 0), 4)
+	excluded_query.exclude = [excluded_body.get_rid()]
+	var excluded: Array[Vector3] = state.collide_shape(excluded_query, 8)
+	_check(excluded.is_empty(), "excluded body RIDs are ignored")
 
 	if failures == 0:
 		print("RESULT: PASS - collide_shape reports overlapping shape points")
