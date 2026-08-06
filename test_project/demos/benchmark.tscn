@@ -1,72 +1,127 @@
 [gd_scene format=3 uid="uid://itg6rldl3hvs"]
 
-[ext_resource type="PackedScene" path="res://common/demo_stage.tscn" id="1_stage"]
-[ext_resource type="PackedScene" path="res://common/orbit_camera.tscn" id="2_cam"]
-[ext_resource type="PackedScene" path="res://common/demo_hud.tscn" id="3_hud"]
-[ext_resource type="Script" path="res://demos/benchmark.gd" id="4_script"]
+[ext_resource type="PackedScene" uid="uid://itg6r3r77evs" path="res://common/demo_stage.tscn" id="1_stage"]
+[ext_resource type="PackedScene" uid="uid://i5tul4a8e0vs" path="res://common/orbit_camera.tscn" id="2_cam"]
+[ext_resource type="PackedScene" uid="uid://b3ddemohud001" path="res://common/demo_hud.tscn" id="3_hud"]
+[ext_resource type="Script" uid="uid://dlna1bkwgbeq8" path="res://demos/benchmark.gd" id="4_script"]
 
 [sub_resource type="BoxShape3D" id="WallShape"]
-size = Vector3(0.5, 6, 14)
-
-[sub_resource type="BoxMesh" id="WallMesh"]
 size = Vector3(0.5, 6, 14)
 
 [sub_resource type="StandardMaterial3D" id="WallMat"]
 transparency = 1
 albedo_color = Color(0.5, 0.55, 0.6, 0.2)
 
-[node name="Benchmark" type="Node3D" node_paths=PackedStringArray("hud", "spawn_root")]
+[sub_resource type="BoxMesh" id="WallMesh"]
+size = Vector3(0.5, 6, 14)
+
+[node name="Benchmark" type="Node3D" unique_id=2066640064 node_paths=PackedStringArray("hud", "spawn_root", "graph", "batch_size", "start_button", "export_button", "readout")]
 script = ExtResource("4_script")
-description = "Spawns waves of rigid bodies into a walled pit and reports FPS and physics step time. Flip physics/3d/physics_engine in Project Settings to compare against Godot Physics."
-hud = NodePath("DemoHud")
 spawn_root = NodePath("Bodies")
+graph = NodePath("BenchUi/Panel/Rows/Graph")
+batch_size = NodePath("BenchUi/Panel/Rows/BatchRow/BatchSize")
+start_button = NodePath("BenchUi/Panel/Rows/Buttons/StartButton")
+export_button = NodePath("BenchUi/Panel/Rows/Buttons/ExportButton")
+readout = NodePath("BenchUi/Panel/Rows/Readout")
+description = "Spawns rigid bodies into a walled pit and reports FPS and physics step time. 
+Flip physics/3d/physics_engine in Project Settings to compare against other physics."
+hud = NodePath("DemoHud")
 
-[node name="Stage" parent="." instance=ExtResource("1_stage")]
+[node name="Stage" parent="." unique_id=1958263154 instance=ExtResource("1_stage")]
 
-[node name="OrbitCamera" parent="." instance=ExtResource("2_cam")]
+[node name="OrbitCamera" parent="." unique_id=792738315 instance=ExtResource("2_cam")]
 transform = Transform3D(1, 0, 0, 0, 0.927, 0.375, 0, -0.375, 0.927, 0, 4, 0)
 distance = 26.0
 
-[node name="DemoHud" parent="." instance=ExtResource("3_hud")]
+[node name="DemoHud" parent="." unique_id=1487304203 instance=ExtResource("3_hud")]
 
-[node name="Bodies" type="Node3D" parent="."]
+[node name="Bodies" type="Node3D" parent="." unique_id=1465441753]
 
-[node name="WallLeft" type="StaticBody3D" parent="."]
+[node name="WallLeft" type="StaticBody3D" parent="." unique_id=812028638]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 3, 0)
 
-[node name="Collision" type="CollisionShape3D" parent="WallLeft"]
+[node name="Collision" type="CollisionShape3D" parent="WallLeft" unique_id=1621025659]
 shape = SubResource("WallShape")
 
-[node name="Mesh" type="MeshInstance3D" parent="WallLeft"]
-mesh = SubResource("WallMesh")
+[node name="Mesh" type="MeshInstance3D" parent="WallLeft" unique_id=691470035]
 material_override = SubResource("WallMat")
+mesh = SubResource("WallMesh")
 
-[node name="WallRight" type="StaticBody3D" parent="."]
+[node name="WallRight" type="StaticBody3D" parent="." unique_id=1134349235]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 3, 0)
 
-[node name="Collision" type="CollisionShape3D" parent="WallRight"]
+[node name="Collision" type="CollisionShape3D" parent="WallRight" unique_id=147623628]
 shape = SubResource("WallShape")
 
-[node name="Mesh" type="MeshInstance3D" parent="WallRight"]
-mesh = SubResource("WallMesh")
+[node name="Mesh" type="MeshInstance3D" parent="WallRight" unique_id=1747371939]
 material_override = SubResource("WallMat")
+mesh = SubResource("WallMesh")
 
-[node name="WallBack" type="StaticBody3D" parent="."]
+[node name="WallBack" type="StaticBody3D" parent="." unique_id=713006692]
 transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 3, -7)
 
-[node name="Collision" type="CollisionShape3D" parent="WallBack"]
+[node name="Collision" type="CollisionShape3D" parent="WallBack" unique_id=648252171]
 shape = SubResource("WallShape")
 
-[node name="Mesh" type="MeshInstance3D" parent="WallBack"]
-mesh = SubResource("WallMesh")
+[node name="Mesh" type="MeshInstance3D" parent="WallBack" unique_id=712676249]
 material_override = SubResource("WallMat")
+mesh = SubResource("WallMesh")
 
-[node name="WallFront" type="StaticBody3D" parent="."]
+[node name="WallFront" type="StaticBody3D" parent="." unique_id=4836806]
 transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 3, 7)
 
-[node name="Collision" type="CollisionShape3D" parent="WallFront"]
+[node name="Collision" type="CollisionShape3D" parent="WallFront" unique_id=2102664115]
 shape = SubResource("WallShape")
 
-[node name="Mesh" type="MeshInstance3D" parent="WallFront"]
-mesh = SubResource("WallMesh")
+[node name="Mesh" type="MeshInstance3D" parent="WallFront" unique_id=192452660]
 material_override = SubResource("WallMat")
+mesh = SubResource("WallMesh")
+
+[node name="BenchUi" type="CanvasLayer" parent="."]
+
+[node name="Panel" type="PanelContainer" parent="BenchUi"]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -340.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = 400.0
+grow_horizontal = 0
+
+[node name="Rows" type="VBoxContainer" parent="BenchUi/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Readout" type="Label" parent="BenchUi/Panel/Rows"]
+layout_mode = 2
+text = "Idle"
+
+[node name="Graph" type="Control" parent="BenchUi/Panel/Rows"]
+custom_minimum_size = Vector2(0, 120)
+layout_mode = 2
+
+[node name="BatchRow" type="HBoxContainer" parent="BenchUi/Panel/Rows"]
+layout_mode = 2
+
+[node name="BatchLabel" type="Label" parent="BenchUi/Panel/Rows/BatchRow"]
+layout_mode = 2
+text = "Bodies per drop"
+
+[node name="BatchSize" type="SpinBox" parent="BenchUi/Panel/Rows/BatchRow"]
+layout_mode = 2
+min_value = 4.0
+max_value = 512.0
+step = 4.0
+value = 36.0
+
+[node name="Buttons" type="HBoxContainer" parent="BenchUi/Panel/Rows"]
+layout_mode = 2
+
+[node name="StartButton" type="Button" parent="BenchUi/Panel/Rows/Buttons"]
+layout_mode = 2
+text = "Start benchmark"
+
+[node name="ExportButton" type="Button" parent="BenchUi/Panel/Rows/Buttons"]
+layout_mode = 2
+text = "Export"

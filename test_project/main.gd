@@ -10,20 +10,20 @@ const DEMOS: Array[Dictionary] = [
 	{"name": "Trimesh", "path": "res://demos/trimesh.tscn"},
 	{"name": "Benchmark", "path": "res://demos/benchmark.tscn"},
 ]
+const BACKEND_SETTING: String = "physics/3d/physics_engine"
+## Dummy runs no simulation, so it is never a useful comparison.
+const HIDDEN_BACKENDS: PackedStringArray = PackedStringArray(["Dummy"])
 
 @onready var _buttons: VBoxContainer = %Buttons
-@onready var _backend_label: Label = %BackendLabel
+@onready var _backend_picker: OptionButton = %BackendPicker
+@onready var _backend_note: Label = %BackendNote
+
+var _backends: PackedStringArray = PackedStringArray()
 
 
 func _ready() -> void:
-	var engine_name: String = str(
-		ProjectSettings.get_setting("physics/3d/physics_engine", "DEFAULT")
-	)
-	var loaded: bool = ClassDB.class_exists(&"Box3DPhysicsServer3D")
-	_backend_label.text = "Physics backend: %s    Extension loaded: %s" % [
-		engine_name,
-		"yes" if loaded else "no",
-	]
+	_populate_backends()
+	_backend_picker.item_selected.connect(_on_backend_selected)
 
 	for demo in DEMOS:
 		var button: Button = Button.new()
@@ -33,6 +33,35 @@ func _ready() -> void:
 
 	if _buttons.get_child_count() > 0:
 		(_buttons.get_child(0) as Button).grab_focus()
+
+
+func _populate_backends() -> void:
+	var current: String = str(ProjectSettings.get_setting(BACKEND_SETTING, "DEFAULT"))
+	for property in ProjectSettings.get_property_list():
+		if property["name"] != BACKEND_SETTING:
+			continue
+		for name in String(property["hint_string"]).split(","):
+			if not HIDDEN_BACKENDS.has(name):
+				_backends.append(name)
+		break
+
+	for i in _backends.size():
+		_backend_picker.add_item(_backends[i], i)
+		if _backends[i] == current:
+			_backend_picker.select(i)
+
+	_backend_note.text = "Switching relaunches the project: the physics server is built once at startup."
+
+
+# The physics server is created once at startup, so switching means relaunching.
+func _on_backend_selected(index: int) -> void:
+	var chosen: String = _backends[index]
+	if chosen == str(ProjectSettings.get_setting(BACKEND_SETTING, "DEFAULT")):
+		return
+	ProjectSettings.set_setting(BACKEND_SETTING, chosen)
+	ProjectSettings.save()
+	OS.set_restart_on_exit(true, ["--path", ProjectSettings.globalize_path("res://")])
+	get_tree().quit()
 
 
 func _on_demo_pressed(path: String) -> void:
