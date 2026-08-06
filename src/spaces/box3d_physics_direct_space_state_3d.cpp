@@ -155,6 +155,7 @@ bool Box3DPhysicsDirectSpaceState3D::_intersect_ray(
 	ERR_FAIL_NULL_V(space, false);
 
 	Box3DQueryFilter3D filter(p_collision_mask, p_collide_with_bodies, p_collide_with_areas);
+	filter.direct_state = this;
 
 	RayContext context;
 	context.filter = &filter;
@@ -193,6 +194,7 @@ int32_t Box3DPhysicsDirectSpaceState3D::_intersect_point(
 	ERR_FAIL_NULL_V(space, 0);
 
 	Box3DQueryFilter3D filter(p_collision_mask, p_collide_with_bodies, p_collide_with_areas);
+	filter.direct_state = this;
 
 	const b3Vec3 point = godot_to_b3(p_position);
 	b3ShapeProxy proxy;
@@ -231,6 +233,7 @@ int32_t Box3DPhysicsDirectSpaceState3D::_intersect_shape(
 	}
 
 	Box3DQueryFilter3D filter(p_collision_mask, p_collide_with_bodies, p_collide_with_areas);
+	filter.direct_state = this;
 
 	OverlapContext context;
 	context.filter = &filter;
@@ -266,6 +269,7 @@ bool Box3DPhysicsDirectSpaceState3D::_cast_motion(
 	}
 
 	Box3DQueryFilter3D filter(p_collision_mask, p_collide_with_bodies, p_collide_with_areas);
+	filter.direct_state = this;
 
 	RayContext context;
 	context.filter = &filter;
@@ -309,6 +313,7 @@ bool Box3DPhysicsDirectSpaceState3D::_collide_shape(
 	}
 
 	Box3DQueryFilter3D filter(p_collision_mask, p_collide_with_bodies, p_collide_with_areas);
+	filter.direct_state = this;
 
 	CollideShapeContext context;
 	context.filter = &filter;
@@ -343,6 +348,7 @@ bool Box3DPhysicsDirectSpaceState3D::_rest_info(
 	}
 
 	Box3DQueryFilter3D filter(p_collision_mask, p_collide_with_bodies, p_collide_with_areas);
+	filter.direct_state = this;
 
 	RayContext context;
 	context.filter = &filter;
