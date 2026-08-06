@@ -97,8 +97,8 @@ func _spawn_layer() -> void:
 		var body: RigidBody3D = BOX_SCENE.instantiate()
 		spawn_root.add_child(body)
 		var column: int = i % LATTICE_COLUMNS
-		var row: int = (i / LATTICE_COLUMNS) % LATTICE_ROWS
-		var stack: int = i / (LATTICE_COLUMNS * LATTICE_ROWS)
+		var row: int = floori(i / float(LATTICE_COLUMNS)) % LATTICE_ROWS
+		var stack: int = floori(i / float(LATTICE_COLUMNS * LATTICE_ROWS))
 		# Alternate each layer 90 degrees so the tower interlocks like Jenga.
 		var offset_x: float = (column - (LATTICE_COLUMNS - 1) * 0.5) * SPAWN_SPACING
 		var offset_z: float = (row - (LATTICE_ROWS - 1) * 0.5) * SPAWN_SPACING

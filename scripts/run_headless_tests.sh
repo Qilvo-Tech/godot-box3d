@@ -38,15 +38,12 @@ fi
 mkdir -p "$test_addon_bin" "$godot_metadata_dir"
 ln -sf "$extension_library" "$test_addon_bin/$extension_filename"
 
-# Running a script directly does not scan the project for GDExtensions. Register every
-# installed one so tests cannot silently use GodotPhysics3D and other physics addons
-# (Rapier, Jolt) stay selectable in the demo project.
-: > "$godot_metadata_dir/extension_list.cfg"
-for extension in "$repo_root"/test_project/addons/*/*.gdextension; do
-	[[ -e "$extension" ]] || continue
-	printf 'res://addons/%s\n' "${extension#"$repo_root/test_project/addons/"}" \
-		>> "$godot_metadata_dir/extension_list.cfg"
-done
+# Running a script directly does not scan the project for GDExtensions, so register Box3D by
+# hand. Only Box3D: the tests never exercise another backend, and a second GDExtension built
+# against a different Godot version can abort the process before Box3D registers, failing every
+# test for an unrelated reason. Other physics addons stay available in the editor.
+printf '%s\n' 'res://addons/godot-box3d/godot-box3d.gdextension' \
+	> "$godot_metadata_dir/extension_list.cfg"
 
 backend_test="backend_activation_test.gd"
 

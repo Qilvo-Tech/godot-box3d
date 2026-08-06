@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" uid="uid://i5tul4a8e0vs" path="res://common/orbit_camera.tscn" id="2_cam"]
 [ext_resource type="PackedScene" uid="uid://b3ddemohud001" path="res://common/demo_hud.tscn" id="3_hud"]
 [ext_resource type="Script" uid="uid://dlna1bkwgbeq8" path="res://demos/benchmark.gd" id="4_script"]
+[ext_resource type="Theme" uid="uid://itg6r4gdeevs" path="res://common/demo_theme.tres" id="5_0a846"]
 [ext_resource type="Script" uid="uid://d25w11onpkane" path="res://demos/bench_graph.gd" id="10_graph"]
 
 [sub_resource type="BoxShape3D" id="WallShape"]
@@ -90,6 +91,7 @@ offset_left = -324.0
 offset_top = -384.0
 grow_horizontal = 0
 grow_vertical = 0
+theme = ExtResource("5_0a846")
 
 [node name="Rows" type="VBoxContainer" parent="BenchUi/Panel" unique_id=1250740925]
 layout_mode = 2
@@ -120,6 +122,8 @@ value = 36.0
 
 [node name="Buttons" type="HBoxContainer" parent="BenchUi/Panel/Rows" unique_id=1064952074]
 layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 16
 
 [node name="StartButton" type="Button" parent="BenchUi/Panel/Rows/Buttons" unique_id=1683778620]
 layout_mode = 2
