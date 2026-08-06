@@ -2,3 +2,4 @@ build/
 .fetchcontent-cache/
 bin/
 test_project/.godot/
+/test_project/Build
