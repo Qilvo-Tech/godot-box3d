@@ -26,9 +26,7 @@
 <nav id="tabs">
 	<ul class="tablist">
 		{% for item in site.nav %}
-		{% assign target = item.url | relative_url %}
-		{% assign here = page.url | replace: '.html', '' | replace: '/index', '/' %}
-		<li{% if here == item.url %} class="current"{% endif %}><a href="{{ target }}">{{ item.title }}</a></li>
+		<li{% if page.url == item.url %} class="current"{% endif %}><a href="{{ item.url | relative_url }}">{{ item.title }}</a></li>
 		{% endfor %}
 	</ul>
 </nav>

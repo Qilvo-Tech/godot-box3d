@@ -10,11 +10,11 @@ Stock Godot physics nodes keep working. You change a project setting, not your s
 
 > **Status: early and experimental.** Box3D itself is a young engine, and this extension is a work in progress. Expect missing features and rough edges.
 
-- [Installation](installation.md)
-- [Demos](demos.md)
-- [Behavior differences](behavior-differences.md)
-- [Comparison with box3d-godot](comparison.md)
-- [Building from source](building.md)
+- [Installation]({{ '/installation/' | relative_url }})
+- [Demos]({{ '/demos/' | relative_url }})
+- [Behavior differences]({{ '/behavior-differences/' | relative_url }})
+- [Comparison with box3d-godot]({{ '/comparison/' | relative_url }})
+- [Building from source]({{ '/building/' | relative_url }})
 
 ## Why this exists
 
