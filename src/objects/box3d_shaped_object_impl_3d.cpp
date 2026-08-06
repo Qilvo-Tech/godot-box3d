@@ -113,12 +113,24 @@ b3ShapeId create_box3d_shape(
 
 		case PhysicsServer3D::SHAPE_CONCAVE_POLYGON: {
 			auto* mesh_shape = static_cast<Box3DConcavePolygonShapeImpl3D*>(shape);
-			const b3MeshData* mesh = mesh_shape->get_mesh();
-			if (mesh == nullptr) {
+			def.invokeContactCreation = true;
+
+			// b3CreateMeshShape takes no transform, so an offset or rotated instance needs
+			// its own mesh with the local transform baked into the vertices.
+			if (local.origin == Vector3() && local.basis.is_equal_approx(Basis())) {
+				const b3MeshData* mesh = mesh_shape->get_mesh();
+				if (mesh == nullptr) {
+					return b3_nullShapeId;
+				}
+				return b3CreateMeshShape(p_body_id, &def, mesh, b3Vec3{1.0f, 1.0f, 1.0f});
+			}
+
+			b3MeshData* baked = Box3DConcavePolygonShapeImpl3D::build_mesh(mesh_shape->get_faces(), local);
+			if (baked == nullptr) {
 				return b3_nullShapeId;
 			}
-			def.invokeContactCreation = true;
-			return b3CreateMeshShape(p_body_id, &def, mesh, b3Vec3{1.0f, 1.0f, 1.0f});
+			p_instance.set_owned_mesh(baked);
+			return b3CreateMeshShape(p_body_id, &def, baked, b3Vec3{1.0f, 1.0f, 1.0f});
 		}
 
 		case PhysicsServer3D::SHAPE_HEIGHTMAP: {
@@ -339,5 +351,10 @@ void Box3DShapedObjectImpl3D::_destroy_shape_instance(Box3DShapeInstance3D& p_in
 	if (p_instance.has_shape_id()) {
 		b3DestroyShape(p_instance.get_shape_id(), true);
 		p_instance.set_shape_id(b3_nullShapeId);
+	}
+	// Box3D keeps a pointer to mesh data, so free the baked copy only after the shape.
+	if (p_instance.get_owned_mesh() != nullptr) {
+		b3DestroyMesh(p_instance.get_owned_mesh());
+		p_instance.set_owned_mesh(nullptr);
 	}
 }
