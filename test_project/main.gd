@@ -8,6 +8,7 @@ const DEMOS: Array[Dictionary] = [
 	{"name": "Contacts", "path": "res://demos/contacts.tscn"},
 	{"name": "Collision exceptions", "path": "res://demos/exceptions.tscn"},
 	{"name": "Trimesh", "path": "res://demos/trimesh.tscn"},
+	{"name": "Trimesh transforms", "path": "res://demos/trimesh_transform.tscn"},
 	{"name": "Benchmark", "path": "res://demos/benchmark.tscn"},
 ]
 const BACKEND_SETTING: String = "physics/3d/physics_engine"

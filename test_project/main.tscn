@@ -39,24 +39,35 @@ size_flags_horizontal = 4
 layout_mode = 2
 texture = ExtResource("3_h2yge")
 
-[node name="Title" type="Label" parent="Margin/Column/HBoxContainer" unique_id=1690683528]
+[node name="VBoxContainer" type="VBoxContainer" parent="Margin/Column/HBoxContainer" unique_id=267125238]
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="Title" type="Label" parent="Margin/Column/HBoxContainer/VBoxContainer" unique_id=1690683528]
 layout_mode = 2
 theme_type_variation = &"DemoTitle"
 theme_override_colors/font_color = Color(0.98039216, 0.7411765, 0.18431373, 1)
 text = "godot-box3d demos"
 
-[node name="BackendRow" type="HBoxContainer" parent="Margin/Column"]
+[node name="Hint" type="Label" parent="Margin/Column/HBoxContainer/VBoxContainer" unique_id=1664007441]
+layout_mode = 2
+theme_type_variation = &"DemoStatus"
+text = "Box3d by Erin Catto
+godot-box3d by Mark Arneman"
+horizontal_alignment = 1
+
+[node name="BackendRow" type="HBoxContainer" parent="Margin/Column" unique_id=1445307392]
 layout_mode = 2
 
-[node name="BackendCaption" type="Label" parent="Margin/Column/BackendRow"]
+[node name="BackendCaption" type="Label" parent="Margin/Column/BackendRow" unique_id=1174382963]
 layout_mode = 2
 text = "Physics backend"
 
-[node name="BackendPicker" type="OptionButton" parent="Margin/Column/BackendRow"]
+[node name="BackendPicker" type="OptionButton" parent="Margin/Column/BackendRow" unique_id=604990881]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="BackendNote" type="Label" parent="Margin/Column"]
+[node name="BackendNote" type="Label" parent="Margin/Column" unique_id=1699795698]
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"DemoStatus"

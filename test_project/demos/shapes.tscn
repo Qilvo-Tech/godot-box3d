@@ -68,7 +68,7 @@ transform = Transform3D(1, 0, 0, 0, 0.927, 0.375, 0, -0.375, 0.927, 0, 2, 0)
 [node name="DemoHud" parent="." unique_id=1536249066 instance=ExtResource("3_hud")]
 
 [node name="BoxBody" type="RigidBody3D" parent="." unique_id=1558195880]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.5, 6, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 6, 0)
 
 [node name="Collision" type="CollisionShape3D" parent="BoxBody" unique_id=810485830]
 shape = SubResource("BoxShape_1")
@@ -82,7 +82,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
 text = "BoxShape3D"
 
 [node name="SphereBody" type="RigidBody3D" parent="." unique_id=854735771]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.25, 7, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 7, 0)
 
 [node name="Collision" type="CollisionShape3D" parent="SphereBody" unique_id=1573878545]
 shape = SubResource("SphereShape_1")
@@ -110,7 +110,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
 text = "CapsuleShape3D"
 
 [node name="CylinderBody" type="RigidBody3D" parent="." unique_id=38527393]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.25, 7, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 7, 0)
 
 [node name="Collision" type="CollisionShape3D" parent="CylinderBody" unique_id=147977525]
 shape = SubResource("CylShape_1")
@@ -124,7 +124,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
 text = "CylinderShape3D"
 
 [node name="ConvexBody" type="RigidBody3D" parent="." unique_id=710196322]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.5, 6, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0)
 
 [node name="Collision" type="CollisionShape3D" parent="ConvexBody" unique_id=885204828]
 shape = SubResource("ConvexShape_1")

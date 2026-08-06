@@ -31,7 +31,8 @@ window/stretch/mode="canvas_items"
 [file_customization]
 
 folder_colors={
-"res://common/": "red",
+"res://assets/": "red",
+"res://common/": "yellow",
 "res://demos/": "blue",
 "res://tests/": "green"
 }
