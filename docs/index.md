@@ -1,5 +1,6 @@
 ---
 title: godot-box3d
+permalink: /
 ---
 
 # godot-box3d
