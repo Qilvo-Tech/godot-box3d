@@ -48,6 +48,7 @@ var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 func _ready() -> void:
 	super._ready()
+	Engine.time_scale = 5.0
 	start_button.pressed.connect(_on_start_pressed)
 	export_button.pressed.connect(_on_export_pressed)
 	_reset()

@@ -26,6 +26,9 @@ func _ready() -> void:
 	for entry in _action_buttons():
 		_hud.add_action(entry[0], entry[1])
 
+	if Engine.time_scale != 1.0:
+		Engine.time_scale = 1.0
+
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("demo_back"):
