@@ -8,7 +8,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	_check(ProjectSettings.get_setting("physics/3d/physics_engine", "") == "Box3D Physics (Extension)", "test project requests the Box3D backend")
+	_check(ProjectSettings.get_setting("physics/3d/physics_engine", "") == "Box3D Physics", "test project requests the Box3D backend")
 	_check(ClassDB.class_exists(&"Box3DPhysicsServer3D"), "Box3D extension is loaded")
 	if failures > 0:
 		quit(1)

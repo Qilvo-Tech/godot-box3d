@@ -87,7 +87,7 @@ demo_zoom_out={
 
 [physics]
 
-3d/physics_engine="Box3D Physics (Extension)"
+3d/physics_engine="Box3D Physics"
 
 [rendering]
 
