@@ -6,6 +6,8 @@ Stock Godot physics nodes keep working. You change a project setting, not your s
 
 > **Status: early and experimental.** Box3D itself is a young engine, and this extension is a work in progress. Expect missing features and rough edges.
 
+**Documentation:** https://bearlikelion.github.io/godot-box3d/
+
 ## Why
 
 I'm building [SurfsUp](https://store.steampowered.com/app/3454830/SurfsUp/), a recreation of Source-engine "SkillSurf" in Godot. Surf maps are hard on a physics engine: long ramps built from concave trimesh, corners taken at speed, and head surf along the underside of geometry. Godot's built-in physics and godot-jolt both have trouble with parts of that.
