@@ -97,7 +97,7 @@ void Box3DBodyImpl3D::set_inertia(const Vector3& p_inertia) {
 
 Vector3 Box3DBodyImpl3D::get_center_of_mass() const {
 	if (has_body_id()) {
-		return b3_to_godot(b3Body_GetLocalCenterOfMass(body_id));
+		return b3_to_godot(b3Body_GetLocalCenter(body_id));
 	}
 	return center_of_mass_custom;
 }
@@ -391,7 +391,7 @@ void Box3DBodyImpl3D::refresh_contacts() {
 	contact_pairs.resize(pair_capacity);
 	const int pair_count = b3Body_GetContactData(body_id, contact_pairs.ptr(), pair_capacity);
 
-	const b3Vec3 self_center = b3Body_GetWorldCenterOfMass(body_id);
+	const b3Vec3 self_center = b3Body_GetWorldCenter(body_id);
 
 	for (int i = 0; i < pair_count && (int32_t)contacts.size() < max_contacts_reported; i++) {
 		const b3ContactData& pair = contact_pairs[i];
@@ -409,7 +409,7 @@ void Box3DBodyImpl3D::refresh_contacts() {
 		auto* other = dynamic_cast<Box3DBodyImpl3D*>(
 				static_cast<Box3DShapedObjectImpl3D*>(b3Body_GetUserData(other_id)));
 
-		const b3Vec3 other_center = b3Body_GetWorldCenterOfMass(other_id);
+		const b3Vec3 other_center = b3Body_GetWorldCenter(other_id);
 
 		for (int m = 0; m < pair.manifoldCount && (int32_t)contacts.size() < max_contacts_reported; m++) {
 			const b3Manifold& manifold = pair.manifolds[m];

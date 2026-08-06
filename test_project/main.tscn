@@ -52,7 +52,7 @@ text = "godot-box3d demos"
 [node name="Hint" type="Label" parent="Margin/Column/HBoxContainer/VBoxContainer" unique_id=1664007441]
 layout_mode = 2
 theme_type_variation = &"DemoStatus"
-text = "Box3d by Erin Catto
+text = "Box3D by Erin Catto
 godot-box3d by Mark Arneman"
 horizontal_alignment = 1
 
