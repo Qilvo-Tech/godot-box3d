@@ -27,7 +27,7 @@ New tech is cool and Godot is great. That's most of it. This is my first time do
 | Joints | 3 (pin, hinge, slider) | 8 (adds ball, fixed, motor, wheel, parallel, distance) |
 | Vehicles | `VehicleBody3D` (raycast) | `Box3DWheelJoint` (real constraint) |
 | Heightfields | Yes | No |
-| Platforms | Linux, Windows, macOS | + Android, web |
+| Platforms | Linux, Windows (macOS arm64, untested) | + Android, web |
 | Box3D-only features | Not reachable | Explosions, gyroscopic torque, solver profiling, async stepping |
 
 box3d-godot exposes more of Box3D. This project keeps your project working.
@@ -58,7 +58,8 @@ Use this if you have an existing project or want stock nodes and addons to work.
 - `SoftBody3D`
 - Per-shape indices in query and contact results (multi-shape bodies always report shape 0)
 - Threading and solver profiling
-- More platforms and architectures (currently Linux, Windows, and macOS)
+- macOS support: universal binaries and notarization (arm64 builds compile but are untested)
+- More platforms and architectures (currently Linux and Windows)
 - Performance benchmarking and tuning
 
 ## Behavior differences
@@ -124,6 +125,8 @@ your-project/
 ```
 
 Then set **Project Settings → Physics → 3D → Physics Engine** to `Box3D Physics` and restart. The physics server is built once at startup, so the change needs a restart.
+
+> **macOS is a work in progress.** Builds are Apple Silicon (arm64) only and are not notarized, so Intel Macs cannot load the library and Gatekeeper will need convincing on any Mac. Linux and Windows are the tested platforms. macOS is untested beyond compiling, so treat it as unsupported for now.
 
 ## Building
 

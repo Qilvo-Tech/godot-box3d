@@ -30,7 +30,7 @@ excepted_a = NodePath("ExceptedA")
 excepted_b = NodePath("ExceptedB")
 control_a = NodePath("ControlA")
 control_b = NodePath("ControlB")
-description = "Blue: per-pair collision exception 
+description = "Blue: a per-pair collision exception, so these two pass through each other.
 Orange: no exceptions and push apart.
 Press Space to toggle the exception."
 hud = NodePath("DemoHud")

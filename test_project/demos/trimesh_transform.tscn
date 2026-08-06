@@ -29,7 +29,7 @@ height = 0.7
 [node name="Trimesh transform" type="Node3D" unique_id=694624361 node_paths=PackedStringArray("balls", "hud")]
 script = ExtResource("4_script")
 balls = NodePath("Balls")
-description = "Three trimesh pads with different transforms: plain, offset inside its body, and scaled by its parent. 
+description = "Three trimesh pads with different transforms: plain, offset inside its body, and scaled by its parent.
 Each ball should rest on its own pad. "
 hud = NodePath("DemoHud")
 

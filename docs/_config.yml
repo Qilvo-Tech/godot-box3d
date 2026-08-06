@@ -1,0 +1,3 @@
+title: godot-box3d
+description: Box3D physics for Godot 4, as a drop-in PhysicsServer3D replacement
+theme: jekyll-theme-cayman

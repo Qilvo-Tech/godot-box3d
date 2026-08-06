@@ -54,7 +54,7 @@ pendulum_joint = NodePath("PendulumJoint")
 door = NodePath("Door")
 slider_box = NodePath("SliderBox")
 description = "Left: a hinge joint swinging a door.
-Middle: a pin joint who swings every frame. 
+Middle: a pin joint whose anchor sweeps every frame.
 Right: a slider moving between its limits."
 hud = NodePath("DemoHud")
 

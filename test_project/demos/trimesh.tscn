@@ -27,8 +27,8 @@ size = Vector3(0.9, 0.9, 0.9)
 
 [node name="Trimesh" type="Node3D" unique_id=751551447 node_paths=PackedStringArray("hud")]
 script = ExtResource("4_base")
-description = "A ConcavePolygonShape3D ramp with crates sliding down it. 
-Trimesh bodies collide  but are not detected by an Area3D, which is a documented Box3D difference."
+description = "A ConcavePolygonShape3D ramp with crates sliding down it.
+Trimesh bodies collide but are not detected by an Area3D, which is a documented Box3D difference."
 hud = NodePath("DemoHud")
 
 [node name="Stage" parent="." unique_id=2130299891 instance=ExtResource("1_stage")]

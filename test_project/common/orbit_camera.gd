@@ -15,7 +15,7 @@ var _dragging: bool = false
 
 
 func _ready() -> void:
-	_apply()
+	apply()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -25,17 +25,18 @@ func _unhandled_input(event: InputEvent) -> void:
 		_dragging = false
 	elif event.is_action_pressed("demo_zoom_in"):
 		distance = maxf(min_distance, distance - zoom_step)
-		_apply()
+		apply()
 	elif event.is_action_pressed("demo_zoom_out"):
 		distance = minf(max_distance, distance + zoom_step)
-		_apply()
+		apply()
 	elif event is InputEventMouseMotion and _dragging:
 		var motion: InputEventMouseMotion = event
 		yaw_degrees -= motion.relative.x * orbit_speed
 		pitch_degrees = clampf(pitch_degrees - motion.relative.y * orbit_speed, -85.0, 85.0)
-		_apply()
+		apply()
 
 
-func _apply() -> void:
+## Pushes distance and angles to the camera; call after setting them from code.
+func apply() -> void:
 	rotation_degrees = Vector3(pitch_degrees, yaw_degrees, 0.0)
 	_camera.position = Vector3(0.0, 0.0, distance)
