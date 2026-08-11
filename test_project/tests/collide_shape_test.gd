@@ -17,6 +17,22 @@ func _run() -> void:
 	await physics_frame
 
 	var state: PhysicsDirectSpaceState3D = root.world_3d.direct_space_state
+	var shape_hits: Array[Dictionary] = state.intersect_shape(_make_query(Vector3(0, 0, 0), 4), 8)
+	_check(shape_hits.size() == 1, "intersect_shape reports the overlapping body")
+	if shape_hits.size() == 1:
+		_check(shape_hits[0].get(&"collider") == excluded_body, "intersect_shape resolves collider ObjectID")
+		_check(
+			int(shape_hits[0].get(&"collider_id", 0)) == excluded_body.get_instance_id(),
+			"intersect_shape reports the collider instance ID",
+		)
+	var ray_hit: Dictionary = state.intersect_ray(
+		PhysicsRayQueryParameters3D.create(Vector3(-2, 0, 0), Vector3(2, 0, 0), 4),
+	)
+	_check(ray_hit.get(&"collider") == excluded_body, "intersect_ray resolves collider ObjectID")
+	_check(
+		int(ray_hit.get(&"collider_id", 0)) == excluded_body.get_instance_id(),
+		"intersect_ray reports the collider instance ID",
+	)
 
 	var overlapping: Array[Vector3] = state.collide_shape(_make_query(Vector3(0, 0, 0), 4), 8)
 	_check(not overlapping.is_empty(), "an overlapping query reports collision points")

@@ -2,7 +2,9 @@
 
 #include <box3d/collision.h>
 
-#include <limits>
+#include <cmath>
+
+#include <godot_cpp/templates/local_vector.hpp>
 
 Box3DHeightMapShapeImpl3D::~Box3DHeightMapShapeImpl3D() {
 	if (height_field != nullptr) {
@@ -54,21 +56,32 @@ void Box3DHeightMapShapeImpl3D::_rebuild() {
 		b3DestroyHeightField(height_field);
 		height_field = nullptr;
 	}
+	aabb = AABB();
 
 	if (width < 2 || depth < 2 || heights.size() != width * depth) {
 		return;
 	}
 
-	float min_height = heights[0];
-	float max_height = heights[0];
+	float min_height = 0.0f;
+	float max_height = 0.0f;
+	bool has_finite_height = false;
 	for (int i = 0; i < heights.size(); i++) {
 		const float h = heights[i];
-		if (h < min_height) {
-			min_height = h;
+		if (!std::isfinite(h)) {
+			continue;
 		}
-		if (h > max_height) {
+		if (!has_finite_height) {
+			min_height = h;
+			max_height = h;
+			has_finite_height = true;
+		} else if (h < min_height) {
+			min_height = h;
+		} else if (h > max_height) {
 			max_height = h;
 		}
+	}
+	if (!has_finite_height) {
+		return;
 	}
 
 	if (min_height == max_height) {
@@ -76,9 +89,30 @@ void Box3DHeightMapShapeImpl3D::_rebuild() {
 		max_height = min_height + 0.001f;
 	}
 
+	PackedFloat32Array sanitized_heights = heights;
+	for (int i = 0; i < sanitized_heights.size(); i++) {
+		if (!std::isfinite(sanitized_heights[i])) {
+			sanitized_heights.set(i, min_height);
+		}
+	}
+
+	LocalVector<uint8_t> material_indices;
+	material_indices.resize((width - 1) * (depth - 1));
+	for (int z = 0; z < depth - 1; z++) {
+		for (int x = 0; x < width - 1; x++) {
+			const int top_left = z * width + x;
+			const bool is_hole =
+					!std::isfinite(heights[top_left]) ||
+					!std::isfinite(heights[top_left + 1]) ||
+					!std::isfinite(heights[top_left + width]) ||
+					!std::isfinite(heights[top_left + width + 1]);
+			material_indices[z * (width - 1) + x] = is_hole ? B3_HEIGHT_FIELD_HOLE : 0;
+		}
+	}
+
 	b3HeightFieldDef def = {};
-	def.heights = heights.ptrw();
-	def.materialIndices = nullptr;
+	def.heights = sanitized_heights.ptrw();
+	def.materialIndices = material_indices.ptr();
 	def.scale = b3Vec3{1.0f, 1.0f, 1.0f};
 	def.countX = width;
 	def.countZ = depth;

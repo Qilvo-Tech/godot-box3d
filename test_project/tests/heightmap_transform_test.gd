@@ -74,6 +74,34 @@ func _run() -> void:
 		"heightmap follows later body transforms",
 	)
 
+	var boundary_holes: PackedFloat32Array = _filled_heights(5, 1.0)
+	boundary_holes[0] = NAN
+	boundary_holes[boundary_holes.size() - 1] = NAN
+	_set_heightmap_data(heightmap, 5, boundary_holes)
+	await physics_frame
+	await physics_frame
+	var boundary_fraction: float = _cast_down(mover, Vector3(25, 6, 0))
+	_check(
+		boundary_fraction < 0.75,
+		"boundary NaNs do not poison finite heightfield cells",
+	)
+
+	var interior_hole: PackedFloat32Array = _filled_heights(5, 1.0)
+	interior_hole[2 * 5 + 2] = NAN
+	_set_heightmap_data(heightmap, 5, interior_hole)
+	await physics_frame
+	await physics_frame
+	var hole_fraction: float = _cast_down(mover, Vector3(25, 6, 0))
+	var solid_fraction: float = _cast_down(mover, Vector3(26.5, 6, 1.5))
+	_check(is_equal_approx(hole_fraction, 1.0), "interior NaN creates a collision hole")
+	_check(solid_fraction < 0.75, "interior NaN preserves neighboring finite cells")
+
+	_set_heightmap_data(heightmap, 5, _filled_heights(5, NAN))
+	await physics_frame
+	await physics_frame
+	var all_hole_fraction: float = _cast_down(mover, Vector3(25, 6, 0))
+	_check(is_equal_approx(all_hole_fraction, 1.0), "all-NaN heightmap creates no live shape")
+
 	if failures == 0:
 		print("RESULT: PASS - heightmap transforms")
 	else:
@@ -113,6 +141,30 @@ func _make_capsule_body() -> AnimatableBody3D:
 	body.add_child(collision)
 	root.add_child(body)
 	return body
+
+
+func _filled_heights(size: int, value: float) -> PackedFloat32Array:
+	var result: PackedFloat32Array = PackedFloat32Array()
+	result.resize(size * size)
+	result.fill(value)
+	return result
+
+
+func _set_heightmap_data(heightmap: HeightMapShape3D, size: int, data: PackedFloat32Array) -> void:
+	heightmap.map_width = size
+	heightmap.map_depth = size
+	heightmap.map_data = data
+
+
+func _cast_down(mover: AnimatableBody3D, origin: Vector3) -> float:
+	var exclude: Array[RID] = []
+	return Box3DPhysicsServer3D.body_cast_mover(
+		mover.get_rid(),
+		Transform3D(Basis(), origin),
+		Vector3(0, -4, 0),
+		0.0,
+		exclude,
+	)
 
 
 func _check(condition: bool, message: String) -> void:

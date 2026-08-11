@@ -1372,8 +1372,15 @@ void Box3DPhysicsServer3D::_free_rid(const RID& p_rid) {
 	}
 
 	if (Box3DShapeImpl3D* shape = shape_owner.get_or_null(p_rid)) {
-		memdelete(shape);
+		LocalVector<Box3DShapedObjectImpl3D*> owners;
+		for (Box3DShapedObjectImpl3D* owner : shape->get_owners()) {
+			owners.push_back(owner);
+		}
+		for (Box3DShapedObjectImpl3D* owner : owners) {
+			owner->remove_shape(shape);
+		}
 		shape_owner.free(p_rid);
+		memdelete(shape);
 		return;
 	}
 

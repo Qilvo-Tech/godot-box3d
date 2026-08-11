@@ -64,7 +64,9 @@ bool overlap_result_fcn(b3ShapeId p_shape_id, void* p_context) {
 	PhysicsServer3DExtensionShapeResult& result = ctx->results[ctx->count];
 	result.rid = object->get_rid();
 	result.collider_id = object->get_instance_id();
-	result.shape = 0;
+	result.collider = object->get_instance_unsafe();
+	const auto* shape_instance = static_cast<const Box3DShapeInstance3D*>(b3Shape_GetUserData(p_shape_id));
+	result.shape = shape_instance != nullptr ? (int32_t)shape_instance->get_index() : 0;
 	ctx->count++;
 	return true;
 }
@@ -290,7 +292,10 @@ bool Box3DPhysicsDirectSpaceState3D::_intersect_ray(const Vector3& p_from, const
 	p_result->normal = b3_to_godot(context.normal);
 	p_result->rid = object->get_rid();
 	p_result->collider_id = object->get_instance_id();
-	p_result->shape = 0;
+	p_result->collider = object->get_instance_unsafe();
+	const auto* shape_instance = static_cast<const Box3DShapeInstance3D*>(b3Shape_GetUserData(context.shape_id));
+	p_result->shape = shape_instance != nullptr ? (int32_t)shape_instance->get_index() : 0;
+	p_result->face_index = -1;
 	return true;
 }
 

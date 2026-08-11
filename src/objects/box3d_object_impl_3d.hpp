@@ -24,6 +24,13 @@ public:
 
 	void set_instance_id(uint64_t p_id) { instance_id = p_id; }
 
+	// Result structs cross the GDExtension ABI and expect Godot's native Object pointer,
+	// not godot-cpp's wrapper. This value must only be written into those structs.
+	Object* get_instance_unsafe() const {
+		GodotObject* instance = internal::gdextension_interface_object_get_instance_from_id(instance_id);
+		return reinterpret_cast<Object*>(instance);
+	}
+
 	uint32_t get_collision_layer() const { return collision_layer; }
 
 	virtual void set_collision_layer(uint32_t p_layer) { collision_layer = p_layer; }
