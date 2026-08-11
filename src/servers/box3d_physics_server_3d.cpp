@@ -178,7 +178,17 @@ RID Box3DPhysicsServer3D::_custom_shape_create() {
 void Box3DPhysicsServer3D::_shape_set_data(const RID& p_shape, const Variant& p_data) {
 	Box3DShapeImpl3D* shape = shape_owner.get_or_null(p_shape);
 	ERR_FAIL_NULL(shape);
+	LocalVector<Box3DShapedObjectImpl3D*> owners;
+	for (Box3DShapedObjectImpl3D* owner : shape->get_owners()) {
+		owners.push_back(owner);
+	}
+	for (Box3DShapedObjectImpl3D* owner : owners) {
+		owner->shape_data_changing(shape);
+	}
 	shape->set_data(p_data);
+	for (Box3DShapedObjectImpl3D* owner : owners) {
+		owner->shape_data_changed(shape);
+	}
 }
 
 void Box3DPhysicsServer3D::_shape_set_custom_solver_bias(const RID& p_shape, double p_bias) {

@@ -27,6 +27,29 @@ func _run() -> void:
 		"heightmap honors its centered local shape transform",
 	)
 
+	var collision: CollisionShape3D = terrain.get_node("CollisionShape3D") as CollisionShape3D
+	var heightmap: HeightMapShape3D = collision.shape as HeightMapShape3D
+	heightmap.map_data = PackedFloat32Array(
+		[
+			1.0, 1.0, 1.0,
+			1.0, 1.0, 1.0,
+			1.0, 1.0, 1.0,
+		],
+	)
+	await physics_frame
+	await physics_frame
+	var updated_fraction: float = Box3DPhysicsServer3D.body_cast_mover(
+		mover.get_rid(),
+		Transform3D(Basis(), Vector3(15, 6, 0)),
+		Vector3(0, -4, 0),
+		0.0,
+		exclude,
+	)
+	_check(
+		updated_fraction < initial_fraction - 0.15,
+		"attached heightmap rebuilds after map_data changes",
+	)
+
 	terrain.position.x = 20
 	await physics_frame
 	await physics_frame
@@ -47,7 +70,7 @@ func _run() -> void:
 	)
 	_check(is_equal_approx(old_fraction, 1.0), "heightmap leaves its old body position")
 	_check(
-		moved_fraction > 0.35 and moved_fraction < 0.65,
+		absf(moved_fraction - updated_fraction) < 0.05,
 		"heightmap follows later body transforms",
 	)
 
@@ -62,6 +85,7 @@ func _make_heightmap() -> StaticBody3D:
 	var body: StaticBody3D = StaticBody3D.new()
 	body.position = Vector3(10, 2, 0)
 	var collision: CollisionShape3D = CollisionShape3D.new()
+	collision.name = "CollisionShape3D"
 	collision.position = Vector3(5, 1, 0)
 	var heightmap: HeightMapShape3D = HeightMapShape3D.new()
 	heightmap.map_width = 3

@@ -191,6 +191,11 @@ b3ShapeId create_box3d_shape(
 
 Box3DShapedObjectImpl3D::~Box3DShapedObjectImpl3D() {
 	_destroy_body_id();
+	for (auto& instance : shapes) {
+		if (Box3DShapeImpl3D* shape = instance.get_shape()) {
+			shape->remove_owner(this);
+		}
+	}
 }
 
 Transform3D Box3DShapedObjectImpl3D::get_transform() const {
@@ -241,18 +246,47 @@ void Box3DShapedObjectImpl3D::remove_shape(const Box3DShapeImpl3D* p_shape) {
 
 void Box3DShapedObjectImpl3D::remove_shape(int32_t p_index) {
 	ERR_FAIL_INDEX(p_index, (int32_t)shapes.size());
+	Box3DShapeImpl3D* removed_shape = shapes[p_index].get_shape();
 	_destroy_shape_instance(shapes[p_index]);
 	shapes.remove_at(p_index);
 	for (uint32_t i = p_index; i < shapes.size(); i++) {
 		shapes[i].set_index(i);
+	}
+	if (removed_shape != nullptr) {
+		bool still_used = false;
+		for (const auto& instance : shapes) {
+			if (instance.get_shape() == removed_shape) {
+				still_used = true;
+				break;
+			}
+		}
+		if (!still_used) {
+			removed_shape->remove_owner(this);
+		}
 	}
 	_shapes_changed();
 }
 
 void Box3DShapedObjectImpl3D::set_shape(int32_t p_index, Box3DShapeImpl3D* p_shape) {
 	ERR_FAIL_INDEX(p_index, (int32_t)shapes.size());
+	Box3DShapeImpl3D* old_shape = shapes[p_index].get_shape();
 	_destroy_shape_instance(shapes[p_index]);
 	shapes[p_index].set_shape(p_shape);
+	if (p_shape != nullptr) {
+		p_shape->add_owner(this);
+	}
+	if (old_shape != nullptr && old_shape != p_shape) {
+		bool still_used = false;
+		for (const auto& instance : shapes) {
+			if (instance.get_shape() == old_shape) {
+				still_used = true;
+				break;
+			}
+		}
+		if (!still_used) {
+			old_shape->remove_owner(this);
+		}
+	}
 	if (has_body_id()) {
 		_create_shape_instance(shapes[p_index]);
 	}
@@ -260,10 +294,17 @@ void Box3DShapedObjectImpl3D::set_shape(int32_t p_index, Box3DShapeImpl3D* p_sha
 }
 
 void Box3DShapedObjectImpl3D::clear_shapes() {
+	LocalVector<Box3DShapeImpl3D*> old_shapes;
 	for (int32_t i = (int32_t)shapes.size() - 1; i >= 0; i--) {
+		if (Box3DShapeImpl3D* shape = shapes[i].get_shape()) {
+			old_shapes.push_back(shape);
+		}
 		_destroy_shape_instance(shapes[i]);
 	}
 	shapes.clear();
+	for (Box3DShapeImpl3D* shape : old_shapes) {
+		shape->remove_owner(this);
+	}
 	_shapes_changed();
 }
 
@@ -349,6 +390,30 @@ void Box3DShapedObjectImpl3D::rebuild_shapes() {
 		}
 	}
 	_shapes_changed();
+}
+
+void Box3DShapedObjectImpl3D::shape_data_changing(const Box3DShapeImpl3D* p_shape) {
+	for (auto& instance : shapes) {
+		if (instance.get_shape() == p_shape) {
+			_destroy_shape_instance(instance);
+		}
+	}
+}
+
+void Box3DShapedObjectImpl3D::shape_data_changed(const Box3DShapeImpl3D* p_shape) {
+	if (!has_body_id()) {
+		return;
+	}
+	bool recreated = false;
+	for (auto& instance : shapes) {
+		if (instance.get_shape() == p_shape && !instance.is_disabled()) {
+			_create_shape_instance(instance);
+			recreated = true;
+		}
+	}
+	if (recreated) {
+		_shapes_changed();
+	}
 }
 
 void Box3DShapedObjectImpl3D::_destroy_body_id() {

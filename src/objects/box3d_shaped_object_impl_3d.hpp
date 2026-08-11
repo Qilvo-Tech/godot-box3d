@@ -60,6 +60,13 @@ public:
 	// space, and after body type transitions that need shapes recreated).
 	void rebuild_shapes();
 
+	// Detach and recreate every live instance that borrows geometry from this shape.
+	// PhysicsServer3D shape resources are mutable after attachment, while Box3D bakes
+	// or borrows their geometry at b3ShapeId creation time.
+	void shape_data_changing(const Box3DShapeImpl3D* p_shape);
+
+	void shape_data_changed(const Box3DShapeImpl3D* p_shape);
+
 protected:
 	// Creates the underlying b3BodyId in the given world using the cached construction
 	// state (transform, velocities, ...). Subclasses fill in body-type-specific fields.
