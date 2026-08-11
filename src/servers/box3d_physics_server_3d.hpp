@@ -1,10 +1,9 @@
 #pragma once
 
-#include "../containers/rid_owner.hpp"
-
 #include <godot_cpp/classes/physics_direct_body_state3d.hpp>
 #include <godot_cpp/classes/physics_server3d_extension.hpp>
 #include <godot_cpp/classes/physics_server3d_rendering_server_handler.hpp>
+#include <godot_cpp/templates/rid_owner.hpp>
 #include <godot_cpp/variant/dictionary.hpp>
 #include <godot_cpp/variant/typed_array.hpp>
 
@@ -293,11 +292,11 @@ class Box3DPhysicsServer3D final : public PhysicsServer3DExtension {
 
 	static Box3DPhysicsServer3D* singleton;
 
-	RID_PtrOwner<Box3DSpace3D> space_owner;
-	RID_PtrOwner<Box3DBodyImpl3D> body_owner;
-	RID_PtrOwner<Box3DAreaImpl3D> area_owner;
-	RID_PtrOwner<Box3DShapeImpl3D> shape_owner;
-	RID_PtrOwner<Box3DJointImpl3D> joint_owner;
+	mutable RID_PtrOwner<Box3DSpace3D, true> space_owner;
+	mutable RID_PtrOwner<Box3DBodyImpl3D, true> body_owner;
+	mutable RID_PtrOwner<Box3DAreaImpl3D, true> area_owner;
+	mutable RID_PtrOwner<Box3DShapeImpl3D, true> shape_owner;
+	mutable RID_PtrOwner<Box3DJointImpl3D, true> joint_owner;
 
 	HashSet<Box3DSpace3D*> active_spaces;
 	// Narrows the reverse lookup when freeing a body, since exceptions are stored one-sided.

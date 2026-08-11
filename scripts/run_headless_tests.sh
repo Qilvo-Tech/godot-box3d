@@ -81,7 +81,9 @@ run_test() {
 	test_output="$("$godot_bin" --headless --path "$repo_root/test_project" --script "res://tests/$test_script" 2>&1)" || test_status=$?
 	printf '%s\n' "$test_output"
 
-	if (( test_status == 0 )) && [[ "$test_output" == *"RIDs in Godot Box3D were found to not have been freed"* ]]; then
+	if (( test_status == 0 )) &&
+		[[ "$test_output" == *"RIDs in Godot Box3D were found to not have been freed"* ||
+			"$test_output" == *"RID allocations of type"*"were leaked at exit"* ]]; then
 		printf 'ERROR: %s leaked one or more Box3D RIDs.\n' "$test_script" >&2
 		test_status=1
 	fi
