@@ -21,6 +21,11 @@ func _run() -> void:
 	var body_accepts: RigidBody3D = _make_body(Vector3(-4, 3, 0), 2, 1)
 	var accepted_by_floor: RigidBody3D = _make_body(Vector3(0, 3, 0), 2, 0)
 	var no_match: RigidBody3D = _make_body(Vector3(4, 3, 0), 2, 0)
+	var runtime_filter: RigidBody3D = _make_body(Vector3(8, 3, 0), 0, 0)
+	var runtime_floor: StaticBody3D = _make_floor(Vector3(8, -0.5, 0), 1, 0)
+	await physics_frame
+	runtime_filter.collision_layer = 2
+	runtime_filter.collision_mask = 1
 
 	for frame in 240:
 		await physics_frame
@@ -28,6 +33,7 @@ func _run() -> void:
 	_check(body_accepts.global_position.y > -1.0, "body mask accepting the floor creates a collision pair")
 	_check(accepted_by_floor.global_position.y > -1.0, "floor mask accepting the body creates a collision pair")
 	_check(no_match.global_position.y < -5.0, "objects with no layer/mask match do not collide")
+	_check(runtime_filter.global_position.y > -1.0, "runtime layer/mask changes update live shape filters")
 
 	var query_target: StaticBody3D = _make_floor(Vector3(10, 0, 0), 4, 0)
 	await physics_frame
@@ -39,6 +45,7 @@ func _run() -> void:
 	accepts_floor.queue_free()
 	floor_accepts.queue_free()
 	query_target.queue_free()
+	runtime_floor.queue_free()
 	if failures == 0:
 		print("RESULT: PASS - collision filters match Godot semantics")
 	else:
