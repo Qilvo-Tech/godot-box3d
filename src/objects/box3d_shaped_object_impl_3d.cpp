@@ -17,6 +17,17 @@
 
 namespace {
 
+Transform3D get_heightmap_body_transform(
+		const Transform3D& p_object_transform,
+		const Box3DShapeInstance3D& p_instance) {
+	auto* height_shape = static_cast<Box3DHeightMapShapeImpl3D*>(p_instance.get_shape());
+	const Vector3 corner_offset(
+			-(real_t)(height_shape->get_width() - 1) * 0.5,
+			0,
+			-(real_t)(height_shape->get_depth() - 1) * 0.5);
+	return p_object_transform * p_instance.get_transform() * Transform3D(Basis(), corner_offset);
+}
+
 // Builds and attaches a live b3ShapeId for the given shape instance, dispatching by
 // concrete Box3DShapeImpl3D subtype. p_is_sensor marks every shape on an area body as a
 // sensor (per the plan's area-bridging design). Returns b3_nullShapeId if the shape has no
@@ -194,6 +205,17 @@ void Box3DShapedObjectImpl3D::set_transform(const Transform3D& p_transform) {
 	if (has_body_id()) {
 		const b3Transform t = godot_to_b3_transform(p_transform);
 		b3Body_SetTransform(body_id, t.p, t.q);
+		for (auto& instance : shapes) {
+			if (!instance.has_auxiliary_body_id()) {
+				continue;
+			}
+			const b3Transform auxiliary_transform = godot_to_b3_transform(
+					get_heightmap_body_transform(p_transform, instance));
+			b3Body_SetTransform(
+					instance.get_auxiliary_body_id(),
+					auxiliary_transform.p,
+					auxiliary_transform.q);
+		}
 	}
 }
 
@@ -332,6 +354,10 @@ void Box3DShapedObjectImpl3D::rebuild_shapes() {
 void Box3DShapedObjectImpl3D::_destroy_body_id() {
 	if (has_body_id()) {
 		for (auto& instance : shapes) {
+			if (instance.has_auxiliary_body_id()) {
+				b3DestroyBody(instance.get_auxiliary_body_id());
+				instance.set_auxiliary_body_id(b3_nullBodyId);
+			}
 			instance.set_shape_id(b3_nullShapeId);
 		}
 		b3DestroyBody(body_id);
@@ -343,12 +369,38 @@ void Box3DShapedObjectImpl3D::_create_shape_instance(Box3DShapeInstance3D& p_ins
 	if (p_instance.has_shape_id() || !has_body_id()) {
 		return;
 	}
-	const b3ShapeId shape_id = create_box3d_shape(body_id, p_instance, collision_layer, collision_mask, _is_sensor_body(), &p_instance, _get_shape_friction(), _get_shape_restitution());
+
+	b3BodyId shape_body_id = body_id;
+	Box3DShapeImpl3D* shape = p_instance.get_shape();
+	if (shape != nullptr && shape->get_type() == PhysicsServer3D::SHAPE_HEIGHTMAP) {
+		ERR_FAIL_COND_MSG(
+				b3Body_GetType(body_id) != b3_staticBody,
+				"Box3D: heightmap shapes are only supported on static bodies.");
+		b3BodyDef body_def = b3DefaultBodyDef();
+		const b3Transform transform = godot_to_b3_transform(
+				get_heightmap_body_transform(get_transform(), p_instance));
+		body_def.type = b3_staticBody;
+		body_def.position = transform.p;
+		body_def.rotation = transform.q;
+		body_def.userData = this;
+		shape_body_id = b3CreateBody(space->get_world_id(), &body_def);
+		p_instance.set_auxiliary_body_id(shape_body_id);
+	}
+
+	const b3ShapeId shape_id = create_box3d_shape(shape_body_id, p_instance, collision_layer, collision_mask, _is_sensor_body(), &p_instance, _get_shape_friction(), _get_shape_restitution());
 	p_instance.set_shape_id(shape_id);
+	if (!p_instance.has_shape_id() && p_instance.has_auxiliary_body_id()) {
+		b3DestroyBody(p_instance.get_auxiliary_body_id());
+		p_instance.set_auxiliary_body_id(b3_nullBodyId);
+	}
 }
 
 void Box3DShapedObjectImpl3D::_destroy_shape_instance(Box3DShapeInstance3D& p_instance) {
-	if (p_instance.has_shape_id()) {
+	if (p_instance.has_auxiliary_body_id()) {
+		b3DestroyBody(p_instance.get_auxiliary_body_id());
+		p_instance.set_auxiliary_body_id(b3_nullBodyId);
+		p_instance.set_shape_id(b3_nullShapeId);
+	} else if (p_instance.has_shape_id()) {
 		b3DestroyShape(p_instance.get_shape_id(), true);
 		p_instance.set_shape_id(b3_nullShapeId);
 	}

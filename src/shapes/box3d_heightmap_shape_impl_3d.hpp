@@ -9,9 +9,8 @@
 // HeightMapShape3D -> a b3HeightFieldData* built via b3CreateHeightField() and shared by
 // every attaching Box3DShapeInstance3D. Static bodies only (matches Box3D's own
 // restriction). Box3D's height field places its local origin at grid corner (0,0); Godot
-// (and godot-jolt) center the grid on the shape origin instead, so the shape instance
-// applies a corner-centering offset when creating the b3ShapeId (see
-// Box3DShapeInstance3D::_create_shape).
+// centers the grid on the shape origin instead. The owning shape instance therefore uses
+// a private static body to represent the local transform and corner-centering offset.
 class Box3DHeightMapShapeImpl3D final : public Box3DShapeImpl3D {
 public:
 	~Box3DHeightMapShapeImpl3D() override;
