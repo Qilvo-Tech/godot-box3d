@@ -26,10 +26,10 @@ New tech is cool and Godot is great. That's most of it. This is my first time do
 | Stock Godot nodes | Work unchanged | Not supported; scenes are rewritten |
 | Adopting it | Change a project setting | Port every physics node |
 | Existing addons | Keep working | Do not apply |
-| Joints | 3 (pin, hinge, slider) | 8 (adds ball, fixed, motor, wheel, parallel, distance) |
+| Joints | 4 (pin, hinge, slider, cone twist) | 8 (adds ball, fixed, motor, wheel, parallel, distance) |
 | Vehicles | `VehicleBody3D` (raycast) | `Box3DWheelJoint` (real constraint) |
 | Heightfields | Yes | No |
-| Platforms | Linux, Windows (macOS arm64, untested) | + Android, web |
+| Platforms | Linux, Windows, macOS, web | + Android |
 | Box3D-only features | Not reachable | Explosions, gyroscopic torque, solver profiling, async stepping |
 
 box3d-godot exposes more of Box3D. This project keeps your project working.
@@ -38,7 +38,7 @@ The trade is structural. `PhysicsServer3D` has no entry point for `b3World_Explo
 
 Use this if you have an existing project or want stock nodes and addons to work. Use box3d-godot if you want Box3D's own feature surface and don't mind building scenes around its nodes. Neither is production-ready.
 
-**Currently behind box3d-godot on:** *joint types, ConeTwist and 6DOF, per-shape indices in query results, profiling, and platforms.*
+**Currently behind box3d-godot on:** *joint types, 6DOF, per-shape indices in query results, profiling, and Android.*
 
 ## What works
 
@@ -47,22 +47,38 @@ Use this if you have an existing project or want stock nodes and addons to work.
 - Areas, including overlap events, gravity/damping overrides, priority ordering, and point gravity
 - Direct space state queries: ray casts, point and shape intersection, shape casts (`cast_motion`), `collide_shape`, and `rest_info`
 - `body_test_motion`, so `CharacterBody3D` and `move_and_slide()` work
+- Box3D-native capsule mover queries for deterministic client/server character movement
 - Contact monitoring, so `RigidBody3D` reports real contact points, normals, and impulses
 - Per-pair collision exceptions
-- Joints: pin, hinge, and slider (pin anchors can be moved after creation)
+- Joints: pin, hinge, slider, and cone twist (pin anchors can be moved after creation)
 - Multithreaded solver: the worker count auto-detects physical cores and can be overridden with the `physics/box3d/worker_count` project setting (results are deterministic across worker counts)
-- A test project with a demo hub, a deterministic benchmark, and 19 headless regression tests
+- Linux, Windows, universal macOS, and threaded/no-thread web GDExtension builds
+- A test project with a demo hub, a deterministic benchmark, and 21 headless regression tests
+
+### Native character mover queries
+
+`Box3DPhysicsServer3D.body_collide_mover()` and `body_cast_mover()` expose
+Box3D's native capsule-mover queries to GDScript while using the active
+`PhysicsServer3D` world. They are intended for projects that run the same Box3D
+character-mover algorithm on a server and need its raw collision planes and cast
+fraction on the client.
+
+The queried body must have exactly one enabled capsule or sphere shape. Collision
+layers, masks, body exceptions, and the explicit RID exclusion list are honored.
+`body_collide_mover()` returns packed arrays named `normals`, `points`,
+`offsets`, `collider_ids`, `local_shapes`, and `collider_shapes`, plus a
+`colliders` RID array. Its optional margin inflates the mover radius; pass zero
+for the exact `b3World_CollideMover` geometry.
 
 ## What's left to do
 
 - Separation ray shapes
-- ConeTwist joints
 - `Generic6DOFJoint3D` (Box3D has no per-axis lock/limit/motor constraint, so there is no faithful mapping; use `PinJoint3D`, `HingeJoint3D`, or `SliderJoint3D` instead)
 - `SoftBody3D`
 - Per-shape indices in query and contact results (multi-shape bodies always report shape 0)
 - Solver profiling
-- macOS support: universal binaries and notarization (arm64 builds compile but are untested)
-- More platforms and architectures (currently Linux and Windows)
+- macOS notarization and runtime testing
+- Android support
 - Performance benchmarking and tuning
 
 ## Behavior differences
@@ -125,13 +141,15 @@ your-project/
       libgodot-box3d.so      (Linux)
       godot-box3d.dll        (Windows)
       libgodot-box3d.dylib   (macOS)
+      libgodot-box3d.web.release.wasm32.threads.wasm
+      libgodot-box3d.web.release.wasm32.nothreads.wasm
 ```
 
 Then set **Project Settings → Physics → 3D → Physics Engine** to `Box3D Physics` and restart. The physics server is built once at startup, so the change needs a restart.
 
 The solver is multithreaded. By default it uses one worker per physical core (efficiency cores and hyperthreads are excluded, since they slow the solver's synchronised stages down). To override it, set `physics/box3d/worker_count` (visible with Advanced Settings on) to an explicit count; `0` means auto. This also needs a restart, and simulation results are identical at any worker count.
 
-> **macOS is a work in progress.** Builds are Apple Silicon (arm64) only and are not notarized, so Intel Macs cannot load the library and Gatekeeper will need convincing on any Mac. Linux and Windows are the tested platforms. macOS is untested beyond compiling, so treat it as unsupported for now.
+> **macOS is a work in progress.** CI builds a universal x86_64/arm64 library, but it is not notarized and remains untested beyond compiling.
 
 ## Building
 
@@ -155,7 +173,7 @@ cmake --build build-win --parallel
 GODOT_BIN=/path/to/godot scripts/run_headless_tests.sh
 ```
 
-The runner builds the extension, registers it, checks the Box3D backend actually loaded, then runs 19 headless regression tests. It exits nonzero if a test fails or leaks a Box3D RID. `GODOT_BIN` can be omitted when a suitable `godot` is on `PATH`.
+The runner builds the extension, registers it, checks the Box3D backend actually loaded, then runs 21 headless regression tests. It exits nonzero if a test fails or leaks a Box3D RID. `GODOT_BIN` can be omitted when a suitable `godot` is on `PATH`.
 
 ## Contributing
 

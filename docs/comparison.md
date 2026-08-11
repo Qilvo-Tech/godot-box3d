@@ -14,10 +14,10 @@ Different projects solving different problems, so this is a comparison rather th
 | Stock Godot nodes | Work unchanged | Not supported; scenes are rewritten |
 | Adopting it | Change a project setting | Port every physics node |
 | Existing addons | Keep working | Do not apply |
-| Joints | 3 (pin, hinge, slider) | 8 (adds ball, fixed, motor, wheel, parallel, distance) |
+| Joints | 4 (pin, hinge, slider, cone twist) | 8 (adds ball, fixed, motor, wheel, parallel, distance) |
 | Vehicles | `VehicleBody3D` (raycast) | `Box3DWheelJoint` (real constraint) |
 | Heightfields | Yes | No |
-| Platforms | Linux, Windows (macOS arm64, untested) | + Android, web |
+| Platforms | Linux, Windows, macOS, web | + Android |
 | Box3D-only features | Not reachable | Explosions, gyroscopic torque, solver profiling, async stepping |
 
 ## The trade
@@ -38,4 +38,4 @@ Neither is production-ready, and both say so.
 
 ## Where this project is behind
 
-Joint types, ConeTwist and 6DOF, per-shape indices in query results, profiling, and platforms.
+Joint types, 6DOF, per-shape indices in query results, profiling, and Android.

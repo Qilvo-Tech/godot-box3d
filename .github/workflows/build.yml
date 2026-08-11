@@ -1,6 +1,7 @@
 name: Build
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     tags: ['v*']
@@ -40,7 +41,12 @@ jobs:
         run: choco install ninja
 
       - name: Configure
+        if: runner.os != 'macOS'
         run: cmake -B build -G "${{ matrix.cmake-generator }}"
+
+      - name: Configure universal binary (macOS)
+        if: runner.os == 'macOS'
+        run: cmake -B build -G "${{ matrix.cmake-generator }}" '-DCMAKE_OSX_ARCHITECTURES=x86_64;arm64'
 
       - name: Build
         run: cmake --build build --parallel
@@ -83,8 +89,51 @@ jobs:
           name: godot-box3d-${{ runner.os }}
           path: bin/
 
+  web:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: nothreads
+            threads: 'OFF'
+          - variant: threads
+            threads: 'ON'
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Install Ninja
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ninja-build
+
+      - name: Install Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 4.0.11
+          actions-cache-folder: emsdk-cache
+
+      - name: Configure
+        run: >-
+          emcmake cmake
+          -B build-web-${{ matrix.variant }}
+          -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DGODOT_BOX3D_WEB_THREADS=${{ matrix.threads }}
+
+      - name: Build
+        run: cmake --build build-web-${{ matrix.variant }} --parallel 2
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: godot-box3d-Web-${{ matrix.variant }}
+          path: bin/libgodot-box3d.web.release.wasm32.${{ matrix.variant }}.wasm
+
   release:
-    needs: build
+    needs: [build, web]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
@@ -93,7 +142,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # Filenames differ per platform, so the three artifacts flatten into one bin/ cleanly.
+      # Filenames differ per platform/ABI, so all artifacts flatten into one bin/ cleanly.
       - name: Download build artifacts
         uses: actions/download-artifact@v7
         with:
@@ -108,6 +157,7 @@ jobs:
           cp LICENSE addon/addons/godot-box3d/
           cp bin/libgodot-box3d.so bin/godot-box3d.dll bin/libgodot-box3d.dylib \
             addon/addons/godot-box3d/bin/
+          cp bin/libgodot-box3d.web.release.wasm32.*.wasm addon/addons/godot-box3d/bin/
           cd addon && zip -r ../godot-box3d-${{ github.ref_name }}.zip addons
 
       - name: Release

@@ -6,6 +6,43 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 	set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type" FORCE)
 endif()
 
+option(GODOT_BOX3D_WEB_THREADS "Build the threaded Godot web GDExtension variant" OFF)
+
+set(GODOT_BOX3D_WEB_BUILD OFF)
+if(EMSCRIPTEN OR CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+	set(GODOT_BOX3D_WEB_BUILD ON)
+endif()
+
+if(GODOT_BOX3D_WEB_THREADS AND NOT GODOT_BOX3D_WEB_BUILD)
+	message(FATAL_ERROR "GODOT_BOX3D_WEB_THREADS requires an Emscripten web build")
+endif()
+
+if(GODOT_BOX3D_WEB_BUILD)
+	# Emscripten's toolchain tells CMake that shared libraries are unsupported,
+	# but Godot web GDExtensions are wasm side modules.
+	set_property(GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS TRUE)
+	set(CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS "-sSIDE_MODULE=1")
+	set(CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS "-sSIDE_MODULE=1")
+
+	set(GODOT_BOX3D_WEB_COMPILE_OPTIONS
+		"-sSIDE_MODULE=1"
+		"-sSUPPORT_LONGJMP=wasm"
+	)
+	set(GODOT_BOX3D_WEB_LINK_OPTIONS
+		"-sSIDE_MODULE=1"
+		"-sSUPPORT_LONGJMP=wasm"
+	)
+	if(GODOT_BOX3D_WEB_THREADS)
+		list(APPEND GODOT_BOX3D_WEB_COMPILE_OPTIONS "-pthread" "-sUSE_PTHREADS=1")
+		list(APPEND GODOT_BOX3D_WEB_LINK_OPTIONS "-pthread" "-sUSE_PTHREADS=1")
+		add_compile_definitions(THREADS_ENABLED)
+	endif()
+	add_compile_definitions(WEB_ENABLED UNIX_ENABLED)
+	# Directory-wide flags cover both this extension and the Box3D subdirectory.
+	add_compile_options(${GODOT_BOX3D_WEB_COMPILE_OPTIONS})
+	add_link_options(${GODOT_BOX3D_WEB_LINK_OPTIONS})
+endif()
+
 # --- box3d (already a submodule, exports box3d::box3d) ---
 # These are option()s defined inside box3d's own CMakeLists.txt, guarded by
 # if(PROJECT_IS_TOP_LEVEL), which is false once we add_subdirectory() it from here -- but
@@ -39,6 +76,12 @@ target_link_libraries(godot-box3d PRIVATE box3d::box3d godot-cpp)
 
 target_compile_features(godot-box3d PRIVATE cxx_std_17)
 
+# GDExtensions are distributed as standalone DLLs. MinGW otherwise leaves runtime
+# dependencies beside the compiler installation, which makes Godot fail to load the DLL.
+if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+	target_link_options(godot-box3d PRIVATE -static-libgcc -static-libstdc++ -static)
+endif()
+
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 	target_compile_options(godot-box3d PRIVATE -Wall)
 endif()
@@ -56,6 +99,18 @@ set_target_properties(godot-box3d PROPERTIES
 	OUTPUT_NAME "godot-box3d"
 	POSITION_INDEPENDENT_CODE ON
 )
+
+if(GODOT_BOX3D_WEB_BUILD)
+	if(GODOT_BOX3D_WEB_THREADS)
+		set(GODOT_BOX3D_WEB_VARIANT "threads")
+	else()
+		set(GODOT_BOX3D_WEB_VARIANT "nothreads")
+	endif()
+	set_target_properties(godot-box3d PROPERTIES
+		OUTPUT_NAME "godot-box3d.web.release.wasm32.${GODOT_BOX3D_WEB_VARIANT}"
+		SUFFIX ".wasm"
+	)
+endif()
 
 # Place the built extension where the .gdextension template expects it during local
 # testing. The $<1:...> wrapper stops multi-config generators (Visual Studio, Xcode)

@@ -29,6 +29,27 @@ git submodule update --init --recursive
 
 The library lands in `bin/` and is copied into `test_project/addons/godot-box3d/bin/`, so the demo project always runs against a fresh build.
 
+## Building for web
+
+Godot web GDExtensions are Emscripten side modules. Build one artifact for each
+Godot export-template ABI; threaded and no-thread modules are not interchangeable.
+
+```sh
+# After activating emsdk (4.0.11 in CI):
+emcmake cmake -B build-web-nothreads -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DGODOT_BOX3D_WEB_THREADS=OFF
+cmake --build build-web-nothreads --parallel 2
+
+emcmake cmake -B build-web-threads -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DGODOT_BOX3D_WEB_THREADS=ON
+cmake --build build-web-threads --parallel 2
+```
+
+The outputs are
+`bin/libgodot-box3d.web.release.wasm32.nothreads.wasm` and
+`bin/libgodot-box3d.web.release.wasm32.threads.wasm`. Export with Godot's
+extension-support web templates and select the matching thread setting.
+
 ## Cross-compiling a Windows DLL from Linux
 
 Needs MinGW-w64 installed.
