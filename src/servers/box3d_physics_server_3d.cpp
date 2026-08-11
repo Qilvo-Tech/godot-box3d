@@ -1,8 +1,9 @@
 #include "box3d_physics_server_3d.hpp"
 
+#include "../joints/box3d_cone_twist_joint_impl_3d.hpp"
+#include "../joints/box3d_filter_joint_impl_3d.hpp"
 #include "../joints/box3d_hinge_joint_impl_3d.hpp"
 #include "../joints/box3d_joint_impl_3d.hpp"
-#include "../joints/box3d_filter_joint_impl_3d.hpp"
 #include "../joints/box3d_pin_joint_impl_3d.hpp"
 #include "../joints/box3d_slider_joint_impl_3d.hpp"
 #include "../misc/type_conversions.hpp"
@@ -24,7 +25,18 @@
 
 #include <box3d/box3d.h>
 
+#include <godot_cpp/core/class_db.hpp>
+
 Box3DPhysicsServer3D* Box3DPhysicsServer3D::singleton = nullptr;
+
+void Box3DPhysicsServer3D::_bind_methods() {
+	ClassDB::bind_static_method("Box3DPhysicsServer3D",
+								D_METHOD("body_collide_mover", "body", "from", "margin", "max_results", "exclude"),
+								&Box3DPhysicsServer3D::body_collide_mover);
+	ClassDB::bind_static_method("Box3DPhysicsServer3D",
+								D_METHOD("body_cast_mover", "body", "from", "motion", "margin", "exclude"),
+								&Box3DPhysicsServer3D::body_cast_mover);
+}
 
 Box3DPhysicsServer3D::Box3DPhysicsServer3D() {
 	singleton = this;
@@ -75,6 +87,26 @@ RID Box3DPhysicsServer3D::_resolve_area_rid(const RID& p_rid) const {
 	const Box3DAreaImpl3D* default_area = space->get_default_area();
 	ERR_FAIL_NULL_V(default_area, p_rid);
 	return default_area->get_rid();
+}
+
+Dictionary Box3DPhysicsServer3D::body_collide_mover(const RID& p_body, const Transform3D& p_from, double p_margin,
+													int32_t p_max_results, const TypedArray<RID>& p_exclude) {
+	ERR_FAIL_NULL_V(singleton, Dictionary());
+	Box3DBodyImpl3D* body = singleton->body_owner.get_or_null(p_body);
+	ERR_FAIL_NULL_V(body, Dictionary());
+	Box3DSpace3D* space = body->get_space();
+	ERR_FAIL_NULL_V(space, Dictionary());
+	return space->get_direct_state()->collide_mover(*body, p_from, p_margin, p_max_results, p_exclude);
+}
+
+double Box3DPhysicsServer3D::body_cast_mover(const RID& p_body, const Transform3D& p_from, const Vector3& p_motion,
+											 double p_margin, const TypedArray<RID>& p_exclude) {
+	ERR_FAIL_NULL_V(singleton, 1.0);
+	Box3DBodyImpl3D* body = singleton->body_owner.get_or_null(p_body);
+	ERR_FAIL_NULL_V(body, 1.0);
+	Box3DSpace3D* space = body->get_space();
+	ERR_FAIL_NULL_V(space, 1.0);
+	return space->get_direct_state()->cast_mover(*body, p_from, p_motion, p_margin, p_exclude);
 }
 
 // --- Shapes ---
@@ -211,7 +243,8 @@ bool Box3DPhysicsServer3D::_space_is_active(const RID& p_space) const {
 	return space->is_active();
 }
 
-void Box3DPhysicsServer3D::_space_set_param(const RID& p_space, PhysicsServer3D::SpaceParameter p_param, double p_value) {
+void Box3DPhysicsServer3D::_space_set_param(const RID& p_space, PhysicsServer3D::SpaceParameter p_param,
+											double p_value) {
 	Box3DSpace3D* space = space_owner.get_or_null(p_space);
 	ERR_FAIL_NULL(space);
 	space->set_param(p_param, p_value);
@@ -271,7 +304,8 @@ RID Box3DPhysicsServer3D::_area_get_space(const RID& p_area) const {
 	return space != nullptr ? space->get_rid() : RID();
 }
 
-void Box3DPhysicsServer3D::_area_add_shape(const RID& p_area, const RID& p_shape, const Transform3D& p_transform, bool p_disabled) {
+void Box3DPhysicsServer3D::_area_add_shape(const RID& p_area, const RID& p_shape, const Transform3D& p_transform,
+										   bool p_disabled) {
 	Box3DAreaImpl3D* area = area_owner.get_or_null(p_area);
 	ERR_FAIL_NULL(area);
 	Box3DShapeImpl3D* shape = shape_owner.get_or_null(p_shape);
@@ -289,7 +323,8 @@ void Box3DPhysicsServer3D::_area_set_shape(const RID& p_area, int32_t p_shape_id
 	area->set_shape(p_shape_idx, shape);
 }
 
-void Box3DPhysicsServer3D::_area_set_shape_transform(const RID& p_area, int32_t p_shape_idx, const Transform3D& p_transform) {
+void Box3DPhysicsServer3D::_area_set_shape_transform(const RID& p_area, int32_t p_shape_idx,
+													 const Transform3D& p_transform) {
 	Box3DAreaImpl3D* area = area_owner.get_or_null(p_area);
 	ERR_FAIL_NULL(area);
 	area->set_shape_transform(p_shape_idx, p_transform);
@@ -344,7 +379,8 @@ uint64_t Box3DPhysicsServer3D::_area_get_object_instance_id(const RID& p_area) c
 	return area->get_instance_id();
 }
 
-void Box3DPhysicsServer3D::_area_set_param(const RID& p_area, PhysicsServer3D::AreaParameter p_param, const Variant& p_value) {
+void Box3DPhysicsServer3D::_area_set_param(const RID& p_area, PhysicsServer3D::AreaParameter p_param,
+										   const Variant& p_value) {
 	Box3DAreaImpl3D* area = area_owner.get_or_null(_resolve_area_rid(p_area));
 	ERR_FAIL_NULL(area);
 	area->set_param(p_param, p_value);
@@ -456,7 +492,8 @@ PhysicsServer3D::BodyMode Box3DPhysicsServer3D::_body_get_mode(const RID& p_body
 	return body->get_mode();
 }
 
-void Box3DPhysicsServer3D::_body_add_shape(const RID& p_body, const RID& p_shape, const Transform3D& p_transform, bool p_disabled) {
+void Box3DPhysicsServer3D::_body_add_shape(const RID& p_body, const RID& p_shape, const Transform3D& p_transform,
+										   bool p_disabled) {
 	Box3DBodyImpl3D* body = body_owner.get_or_null(p_body);
 	ERR_FAIL_NULL(body);
 	Box3DShapeImpl3D* shape = shape_owner.get_or_null(p_shape);
@@ -474,7 +511,8 @@ void Box3DPhysicsServer3D::_body_set_shape(const RID& p_body, int32_t p_shape_id
 	body->set_shape(p_shape_idx, shape);
 }
 
-void Box3DPhysicsServer3D::_body_set_shape_transform(const RID& p_body, int32_t p_shape_idx, const Transform3D& p_transform) {
+void Box3DPhysicsServer3D::_body_set_shape_transform(const RID& p_body, int32_t p_shape_idx,
+													 const Transform3D& p_transform) {
 	Box3DBodyImpl3D* body = body_owner.get_or_null(p_body);
 	ERR_FAIL_NULL(body);
 	body->set_shape_transform(p_shape_idx, p_transform);
@@ -582,41 +620,42 @@ uint32_t Box3DPhysicsServer3D::_body_get_user_flags(const RID& p_body) const {
 	return 0;
 }
 
-void Box3DPhysicsServer3D::_body_set_param(const RID& p_body, PhysicsServer3D::BodyParameter p_param, const Variant& p_value) {
+void Box3DPhysicsServer3D::_body_set_param(const RID& p_body, PhysicsServer3D::BodyParameter p_param,
+										   const Variant& p_value) {
 	Box3DBodyImpl3D* body = body_owner.get_or_null(p_body);
 	ERR_FAIL_NULL(body);
 	switch (p_param) {
-		case PhysicsServer3D::BODY_PARAM_BOUNCE:
-			body->set_bounce(p_value);
-			break;
-		case PhysicsServer3D::BODY_PARAM_FRICTION:
-			body->set_friction(p_value);
-			break;
-		case PhysicsServer3D::BODY_PARAM_MASS:
-			body->set_mass(p_value);
-			break;
-		case PhysicsServer3D::BODY_PARAM_INERTIA:
-			body->set_inertia(p_value);
-			break;
-		case PhysicsServer3D::BODY_PARAM_CENTER_OF_MASS:
-			body->set_center_of_mass(p_value);
-			break;
-		case PhysicsServer3D::BODY_PARAM_GRAVITY_SCALE:
-			body->set_gravity_scale(p_value);
-			break;
-		case PhysicsServer3D::BODY_PARAM_LINEAR_DAMP_MODE:
-		case PhysicsServer3D::BODY_PARAM_ANGULAR_DAMP_MODE:
-			// Box3D always applies damping as a simple replace mode; COMBINE mode has no
-			// direct equivalent and is treated the same as REPLACE.
-			break;
-		case PhysicsServer3D::BODY_PARAM_LINEAR_DAMP:
-			body->set_linear_damping(p_value);
-			break;
-		case PhysicsServer3D::BODY_PARAM_ANGULAR_DAMP:
-			body->set_angular_damping(p_value);
-			break;
-		default:
-			break;
+	case PhysicsServer3D::BODY_PARAM_BOUNCE:
+		body->set_bounce(p_value);
+		break;
+	case PhysicsServer3D::BODY_PARAM_FRICTION:
+		body->set_friction(p_value);
+		break;
+	case PhysicsServer3D::BODY_PARAM_MASS:
+		body->set_mass(p_value);
+		break;
+	case PhysicsServer3D::BODY_PARAM_INERTIA:
+		body->set_inertia(p_value);
+		break;
+	case PhysicsServer3D::BODY_PARAM_CENTER_OF_MASS:
+		body->set_center_of_mass(p_value);
+		break;
+	case PhysicsServer3D::BODY_PARAM_GRAVITY_SCALE:
+		body->set_gravity_scale(p_value);
+		break;
+	case PhysicsServer3D::BODY_PARAM_LINEAR_DAMP_MODE:
+	case PhysicsServer3D::BODY_PARAM_ANGULAR_DAMP_MODE:
+		// Box3D always applies damping as a simple replace mode; COMBINE mode has no
+		// direct equivalent and is treated the same as REPLACE.
+		break;
+	case PhysicsServer3D::BODY_PARAM_LINEAR_DAMP:
+		body->set_linear_damping(p_value);
+		break;
+	case PhysicsServer3D::BODY_PARAM_ANGULAR_DAMP:
+		body->set_angular_damping(p_value);
+		break;
+	default:
+		break;
 	}
 }
 
@@ -624,27 +663,27 @@ Variant Box3DPhysicsServer3D::_body_get_param(const RID& p_body, PhysicsServer3D
 	Box3DBodyImpl3D* body = body_owner.get_or_null(p_body);
 	ERR_FAIL_NULL_V(body, Variant());
 	switch (p_param) {
-		case PhysicsServer3D::BODY_PARAM_BOUNCE:
-			return body->get_bounce();
-		case PhysicsServer3D::BODY_PARAM_FRICTION:
-			return body->get_friction();
-		case PhysicsServer3D::BODY_PARAM_MASS:
-			return body->get_mass();
-		case PhysicsServer3D::BODY_PARAM_INERTIA:
-			return body->get_inertia();
-		case PhysicsServer3D::BODY_PARAM_CENTER_OF_MASS:
-			return body->get_center_of_mass();
-		case PhysicsServer3D::BODY_PARAM_GRAVITY_SCALE:
-			return body->get_gravity_scale();
-		case PhysicsServer3D::BODY_PARAM_LINEAR_DAMP_MODE:
-		case PhysicsServer3D::BODY_PARAM_ANGULAR_DAMP_MODE:
-			return PhysicsServer3D::BODY_DAMP_MODE_COMBINE;
-		case PhysicsServer3D::BODY_PARAM_LINEAR_DAMP:
-			return body->get_linear_damping();
-		case PhysicsServer3D::BODY_PARAM_ANGULAR_DAMP:
-			return body->get_angular_damping();
-		default:
-			return Variant();
+	case PhysicsServer3D::BODY_PARAM_BOUNCE:
+		return body->get_bounce();
+	case PhysicsServer3D::BODY_PARAM_FRICTION:
+		return body->get_friction();
+	case PhysicsServer3D::BODY_PARAM_MASS:
+		return body->get_mass();
+	case PhysicsServer3D::BODY_PARAM_INERTIA:
+		return body->get_inertia();
+	case PhysicsServer3D::BODY_PARAM_CENTER_OF_MASS:
+		return body->get_center_of_mass();
+	case PhysicsServer3D::BODY_PARAM_GRAVITY_SCALE:
+		return body->get_gravity_scale();
+	case PhysicsServer3D::BODY_PARAM_LINEAR_DAMP_MODE:
+	case PhysicsServer3D::BODY_PARAM_ANGULAR_DAMP_MODE:
+		return PhysicsServer3D::BODY_DAMP_MODE_COMBINE;
+	case PhysicsServer3D::BODY_PARAM_LINEAR_DAMP:
+		return body->get_linear_damping();
+	case PhysicsServer3D::BODY_PARAM_ANGULAR_DAMP:
+		return body->get_angular_damping();
+	default:
+		return Variant();
 	}
 }
 
@@ -654,27 +693,28 @@ void Box3DPhysicsServer3D::_body_reset_mass_properties(const RID& p_body) {
 	body->apply_mass_from_shapes();
 }
 
-void Box3DPhysicsServer3D::_body_set_state(const RID& p_body, PhysicsServer3D::BodyState p_state, const Variant& p_value) {
+void Box3DPhysicsServer3D::_body_set_state(const RID& p_body, PhysicsServer3D::BodyState p_state,
+										   const Variant& p_value) {
 	Box3DBodyImpl3D* body = body_owner.get_or_null(p_body);
 	ERR_FAIL_NULL(body);
 	switch (p_state) {
-		case PhysicsServer3D::BODY_STATE_TRANSFORM:
-			body->set_transform(p_value);
-			break;
-		case PhysicsServer3D::BODY_STATE_LINEAR_VELOCITY:
-			body->set_linear_velocity(p_value);
-			break;
-		case PhysicsServer3D::BODY_STATE_ANGULAR_VELOCITY:
-			body->set_angular_velocity(p_value);
-			break;
-		case PhysicsServer3D::BODY_STATE_SLEEPING:
-			body->set_sleeping(p_value);
-			break;
-		case PhysicsServer3D::BODY_STATE_CAN_SLEEP:
-			body->set_sleep_enabled(p_value);
-			break;
-		default:
-			break;
+	case PhysicsServer3D::BODY_STATE_TRANSFORM:
+		body->set_transform(p_value);
+		break;
+	case PhysicsServer3D::BODY_STATE_LINEAR_VELOCITY:
+		body->set_linear_velocity(p_value);
+		break;
+	case PhysicsServer3D::BODY_STATE_ANGULAR_VELOCITY:
+		body->set_angular_velocity(p_value);
+		break;
+	case PhysicsServer3D::BODY_STATE_SLEEPING:
+		body->set_sleeping(p_value);
+		break;
+	case PhysicsServer3D::BODY_STATE_CAN_SLEEP:
+		body->set_sleep_enabled(p_value);
+		break;
+	default:
+		break;
 	}
 }
 
@@ -682,18 +722,18 @@ Variant Box3DPhysicsServer3D::_body_get_state(const RID& p_body, PhysicsServer3D
 	Box3DBodyImpl3D* body = body_owner.get_or_null(p_body);
 	ERR_FAIL_NULL_V(body, Variant());
 	switch (p_state) {
-		case PhysicsServer3D::BODY_STATE_TRANSFORM:
-			return body->get_transform();
-		case PhysicsServer3D::BODY_STATE_LINEAR_VELOCITY:
-			return body->get_linear_velocity();
-		case PhysicsServer3D::BODY_STATE_ANGULAR_VELOCITY:
-			return body->get_angular_velocity();
-		case PhysicsServer3D::BODY_STATE_SLEEPING:
-			return body->is_sleeping();
-		case PhysicsServer3D::BODY_STATE_CAN_SLEEP:
-			return body->is_sleep_enabled();
-		default:
-			return Variant();
+	case PhysicsServer3D::BODY_STATE_TRANSFORM:
+		return body->get_transform();
+	case PhysicsServer3D::BODY_STATE_LINEAR_VELOCITY:
+		return body->get_linear_velocity();
+	case PhysicsServer3D::BODY_STATE_ANGULAR_VELOCITY:
+		return body->get_angular_velocity();
+	case PhysicsServer3D::BODY_STATE_SLEEPING:
+		return body->is_sleeping();
+	case PhysicsServer3D::BODY_STATE_CAN_SLEEP:
+		return body->is_sleep_enabled();
+	default:
+		return Variant();
 	}
 }
 
@@ -739,7 +779,8 @@ void Box3DPhysicsServer3D::_body_add_constant_central_force(const RID& p_body, c
 	body->add_constant_central_force(p_force);
 }
 
-void Box3DPhysicsServer3D::_body_add_constant_force(const RID& p_body, const Vector3& p_force, const Vector3& p_position) {
+void Box3DPhysicsServer3D::_body_add_constant_force(const RID& p_body, const Vector3& p_force,
+													const Vector3& p_position) {
 	Box3DBodyImpl3D* body = body_owner.get_or_null(p_body);
 	ERR_FAIL_NULL(body);
 	body->add_constant_force(p_force, p_position);
@@ -884,7 +925,8 @@ void Box3DPhysicsServer3D::_body_set_state_sync_callback(const RID& p_body, cons
 	body->set_state_sync_callback(p_callable);
 }
 
-void Box3DPhysicsServer3D::_body_set_force_integration_callback(const RID& p_body, const Callable& p_callable, const Variant& p_userdata) {
+void Box3DPhysicsServer3D::_body_set_force_integration_callback(const RID& p_body, const Callable& p_callable,
+																const Variant& p_userdata) {
 	Box3DBodyImpl3D* body = body_owner.get_or_null(p_body);
 	ERR_FAIL_NULL(body);
 	body->set_force_integration_callback(p_callable, p_userdata);
@@ -894,21 +936,17 @@ void Box3DPhysicsServer3D::_body_set_ray_pickable(const RID& p_body, bool p_enab
 	// Not implemented in v1 (no editor picking support).
 }
 
-bool Box3DPhysicsServer3D::_body_test_motion(
-		const RID& p_body,
-		const Transform3D& p_from,
-		const Vector3& p_motion,
-		double p_margin,
-		int32_t p_max_collisions,
-		bool p_collide_separation_ray,
-		bool p_recovery_as_collision,
-		PhysicsServer3DExtensionMotionResult* p_result) const {
+bool Box3DPhysicsServer3D::_body_test_motion(const RID& p_body, const Transform3D& p_from, const Vector3& p_motion,
+											 double p_margin, int32_t p_max_collisions, bool p_collide_separation_ray,
+											 bool p_recovery_as_collision,
+											 PhysicsServer3DExtensionMotionResult* p_result) const {
 	Box3DBodyImpl3D* body = body_owner.get_or_null(p_body);
 	ERR_FAIL_NULL_V(body, false);
 	Box3DSpace3D* space = body->get_space();
 	ERR_FAIL_NULL_V(space, false);
 
-	return space->get_direct_state()->test_body_motion(*body, p_from, p_motion, p_margin, p_max_collisions, p_recovery_as_collision, p_result);
+	return space->get_direct_state()->test_body_motion(*body, p_from, p_motion, p_margin, p_max_collisions,
+													   p_recovery_as_collision, p_result);
 }
 
 PhysicsDirectBodyState3D* Box3DPhysicsServer3D::_body_get_direct_state(const RID& p_body) {
@@ -938,7 +976,8 @@ void Box3DPhysicsServer3D::_joint_clear(const RID& p_joint) {
 	}
 }
 
-void Box3DPhysicsServer3D::_joint_make_pin(const RID& p_joint, const RID& p_body_a, const Vector3& p_local_a, const RID& p_body_b, const Vector3& p_local_b) {
+void Box3DPhysicsServer3D::_joint_make_pin(const RID& p_joint, const RID& p_body_a, const Vector3& p_local_a,
+										   const RID& p_body_b, const Vector3& p_local_b) {
 	_joint_clear(p_joint);
 
 	Box3DBodyImpl3D* body_a = body_owner.get_or_null(p_body_a);
@@ -946,13 +985,15 @@ void Box3DPhysicsServer3D::_joint_make_pin(const RID& p_joint, const RID& p_body
 	ERR_FAIL_NULL(body_a);
 	ERR_FAIL_NULL(body_b);
 
-	auto* joint = memnew(Box3DPinJointImpl3D(body_a, body_b, Transform3D(Basis(), p_local_a), Transform3D(Basis(), p_local_b)));
+	auto* joint =
+		memnew(Box3DPinJointImpl3D(body_a, body_b, Transform3D(Basis(), p_local_a), Transform3D(Basis(), p_local_b)));
 	joint->set_rid(p_joint);
 	joint_owner.replace(p_joint, joint);
 	joint->rebuild();
 }
 
-void Box3DPhysicsServer3D::_pin_joint_set_param(const RID& p_joint, PhysicsServer3D::PinJointParam p_param, double p_value) {
+void Box3DPhysicsServer3D::_pin_joint_set_param(const RID& p_joint, PhysicsServer3D::PinJointParam p_param,
+												double p_value) {
 	auto* joint = dynamic_cast<Box3DPinJointImpl3D*>(joint_owner.get_or_null(p_joint));
 	ERR_FAIL_NULL(joint);
 	joint->set_param(p_param, p_value);
@@ -999,7 +1040,8 @@ Vector3 Box3DPhysicsServer3D::_pin_joint_get_local_b(const RID& p_joint) const {
 	return joint->get_local_frame_b().origin;
 }
 
-void Box3DPhysicsServer3D::_joint_make_hinge(const RID& p_joint, const RID& p_body_a, const Transform3D& p_hinge_a, const RID& p_body_b, const Transform3D& p_hinge_b) {
+void Box3DPhysicsServer3D::_joint_make_hinge(const RID& p_joint, const RID& p_body_a, const Transform3D& p_hinge_a,
+											 const RID& p_body_b, const Transform3D& p_hinge_b) {
 	_joint_clear(p_joint);
 
 	Box3DBodyImpl3D* body_a = body_owner.get_or_null(p_body_a);
@@ -1017,7 +1059,9 @@ void Box3DPhysicsServer3D::_joint_make_hinge(const RID& p_joint, const RID& p_bo
 	joint->rebuild();
 }
 
-void Box3DPhysicsServer3D::_joint_make_hinge_simple(const RID& p_joint, const RID& p_body_a, const Vector3& p_pivot_a, const Vector3& p_axis_a, const RID& p_body_b, const Vector3& p_pivot_b, const Vector3& p_axis_b) {
+void Box3DPhysicsServer3D::_joint_make_hinge_simple(const RID& p_joint, const RID& p_body_a, const Vector3& p_pivot_a,
+													const Vector3& p_axis_a, const RID& p_body_b,
+													const Vector3& p_pivot_b, const Vector3& p_axis_b) {
 	_joint_clear(p_joint);
 
 	Box3DBodyImpl3D* body_a = body_owner.get_or_null(p_body_a);
@@ -1040,19 +1084,22 @@ void Box3DPhysicsServer3D::_joint_make_hinge_simple(const RID& p_joint, const RI
 	joint->rebuild();
 }
 
-void Box3DPhysicsServer3D::_hinge_joint_set_param(const RID& p_joint, PhysicsServer3D::HingeJointParam p_param, double p_value) {
+void Box3DPhysicsServer3D::_hinge_joint_set_param(const RID& p_joint, PhysicsServer3D::HingeJointParam p_param,
+												  double p_value) {
 	auto* joint = dynamic_cast<Box3DHingeJointImpl3D*>(joint_owner.get_or_null(p_joint));
 	ERR_FAIL_NULL(joint);
 	joint->set_param(p_param, p_value);
 }
 
-double Box3DPhysicsServer3D::_hinge_joint_get_param(const RID& p_joint, PhysicsServer3D::HingeJointParam p_param) const {
+double Box3DPhysicsServer3D::_hinge_joint_get_param(const RID& p_joint,
+													PhysicsServer3D::HingeJointParam p_param) const {
 	auto* joint = dynamic_cast<Box3DHingeJointImpl3D*>(joint_owner.get_or_null(p_joint));
 	ERR_FAIL_NULL_V(joint, 0.0);
 	return joint->get_param(p_param);
 }
 
-void Box3DPhysicsServer3D::_hinge_joint_set_flag(const RID& p_joint, PhysicsServer3D::HingeJointFlag p_flag, bool p_enabled) {
+void Box3DPhysicsServer3D::_hinge_joint_set_flag(const RID& p_joint, PhysicsServer3D::HingeJointFlag p_flag,
+												 bool p_enabled) {
 	auto* joint = dynamic_cast<Box3DHingeJointImpl3D*>(joint_owner.get_or_null(p_joint));
 	ERR_FAIL_NULL(joint);
 	joint->set_flag(p_flag, p_enabled);
@@ -1064,7 +1111,8 @@ bool Box3DPhysicsServer3D::_hinge_joint_get_flag(const RID& p_joint, PhysicsServ
 	return joint->get_flag(p_flag);
 }
 
-void Box3DPhysicsServer3D::_joint_make_slider(const RID& p_joint, const RID& p_body_a, const Transform3D& p_local_ref_a, const RID& p_body_b, const Transform3D& p_local_ref_b) {
+void Box3DPhysicsServer3D::_joint_make_slider(const RID& p_joint, const RID& p_body_a, const Transform3D& p_local_ref_a,
+											  const RID& p_body_b, const Transform3D& p_local_ref_b) {
 	_joint_clear(p_joint);
 
 	Box3DBodyImpl3D* body_a = body_owner.get_or_null(p_body_a);
@@ -1081,44 +1129,70 @@ void Box3DPhysicsServer3D::_joint_make_slider(const RID& p_joint, const RID& p_b
 	joint->rebuild();
 }
 
-void Box3DPhysicsServer3D::_slider_joint_set_param(const RID& p_joint, PhysicsServer3D::SliderJointParam p_param, double p_value) {
+void Box3DPhysicsServer3D::_slider_joint_set_param(const RID& p_joint, PhysicsServer3D::SliderJointParam p_param,
+												   double p_value) {
 	auto* joint = dynamic_cast<Box3DSliderJointImpl3D*>(joint_owner.get_or_null(p_joint));
 	ERR_FAIL_NULL(joint);
 	joint->set_param(p_param, p_value);
 }
 
-double Box3DPhysicsServer3D::_slider_joint_get_param(const RID& p_joint, PhysicsServer3D::SliderJointParam p_param) const {
+double Box3DPhysicsServer3D::_slider_joint_get_param(const RID& p_joint,
+													 PhysicsServer3D::SliderJointParam p_param) const {
 	auto* joint = dynamic_cast<Box3DSliderJointImpl3D*>(joint_owner.get_or_null(p_joint));
 	ERR_FAIL_NULL_V(joint, 0.0);
 	return joint->get_param(p_param);
 }
 
-void Box3DPhysicsServer3D::_joint_make_cone_twist(const RID& p_joint, const RID& p_body_a, const Transform3D& p_local_ref_a, const RID& p_body_b, const Transform3D& p_local_ref_b) {
-	ERR_FAIL_MSG("Box3D: ConeTwistJoint3D is not supported in this version of the Box3D extension.");
+void Box3DPhysicsServer3D::_joint_make_cone_twist(const RID& p_joint, const RID& p_body_a,
+												  const Transform3D& p_local_ref_a, const RID& p_body_b,
+												  const Transform3D& p_local_ref_b) {
+	_joint_clear(p_joint);
+
+	Box3DBodyImpl3D* body_a = body_owner.get_or_null(p_body_a);
+	Box3DBodyImpl3D* body_b = body_owner.get_or_null(p_body_b);
+	ERR_FAIL_NULL(body_a);
+	ERR_FAIL_NULL(body_b);
+
+	auto* joint = memnew(Box3DConeTwistJointImpl3D(body_a, body_b, p_local_ref_a, p_local_ref_b));
+	joint->set_rid(p_joint);
+	joint_owner.replace(p_joint, joint);
+	joint->rebuild();
 }
 
-void Box3DPhysicsServer3D::_cone_twist_joint_set_param(const RID& p_joint, PhysicsServer3D::ConeTwistJointParam p_param, double p_value) {
+void Box3DPhysicsServer3D::_cone_twist_joint_set_param(const RID& p_joint, PhysicsServer3D::ConeTwistJointParam p_param,
+													   double p_value) {
+	auto* joint = dynamic_cast<Box3DConeTwistJointImpl3D*>(joint_owner.get_or_null(p_joint));
+	ERR_FAIL_NULL(joint);
+	joint->set_param(p_param, p_value);
 }
 
-double Box3DPhysicsServer3D::_cone_twist_joint_get_param(const RID& p_joint, PhysicsServer3D::ConeTwistJointParam p_param) const {
-	return 0.0;
+double Box3DPhysicsServer3D::_cone_twist_joint_get_param(const RID& p_joint,
+														 PhysicsServer3D::ConeTwistJointParam p_param) const {
+	auto* joint = dynamic_cast<Box3DConeTwistJointImpl3D*>(joint_owner.get_or_null(p_joint));
+	ERR_FAIL_NULL_V(joint, 0.0);
+	return joint->get_param(p_param);
 }
 
-void Box3DPhysicsServer3D::_joint_make_generic_6dof(const RID& p_joint, const RID& p_body_a, const Transform3D& p_local_ref_a, const RID& p_body_b, const Transform3D& p_local_ref_b) {
+void Box3DPhysicsServer3D::_joint_make_generic_6dof(const RID& p_joint, const RID& p_body_a,
+													const Transform3D& p_local_ref_a, const RID& p_body_b,
+													const Transform3D& p_local_ref_b) {
 	ERR_FAIL_MSG("Box3D: Generic6DOFJoint3D is not supported; use PinJoint3D, HingeJoint3D, or SliderJoint3D instead.");
 }
 
-void Box3DPhysicsServer3D::_generic_6dof_joint_set_param(const RID& p_joint, Vector3::Axis p_axis, PhysicsServer3D::G6DOFJointAxisParam p_param, double p_value) {
+void Box3DPhysicsServer3D::_generic_6dof_joint_set_param(const RID& p_joint, Vector3::Axis p_axis,
+														 PhysicsServer3D::G6DOFJointAxisParam p_param, double p_value) {
 }
 
-double Box3DPhysicsServer3D::_generic_6dof_joint_get_param(const RID& p_joint, Vector3::Axis p_axis, PhysicsServer3D::G6DOFJointAxisParam p_param) const {
+double Box3DPhysicsServer3D::_generic_6dof_joint_get_param(const RID& p_joint, Vector3::Axis p_axis,
+														   PhysicsServer3D::G6DOFJointAxisParam p_param) const {
 	return 0.0;
 }
 
-void Box3DPhysicsServer3D::_generic_6dof_joint_set_flag(const RID& p_joint, Vector3::Axis p_axis, PhysicsServer3D::G6DOFJointAxisFlag p_flag, bool p_enable) {
-}
+void Box3DPhysicsServer3D::_generic_6dof_joint_set_flag(const RID& p_joint, Vector3::Axis p_axis,
+														PhysicsServer3D::G6DOFJointAxisFlag p_flag, bool p_enable) {}
 
-bool Box3DPhysicsServer3D::_generic_6dof_joint_get_flag(const RID& p_joint, Vector3::Axis p_axis, PhysicsServer3D::G6DOFJointAxisFlag p_flag) const {
+bool Box3DPhysicsServer3D::_generic_6dof_joint_get_flag(const RID& p_joint, Vector3::Axis p_axis,
+														PhysicsServer3D::G6DOFJointAxisFlag p_flag) const {
 	return false;
 }
 
@@ -1156,114 +1230,98 @@ RID Box3DPhysicsServer3D::_soft_body_create() {
 	ERR_FAIL_V_MSG(RID(), "Box3D: SoftBody3D is not supported in this version of the Box3D extension.");
 }
 
-void Box3DPhysicsServer3D::_soft_body_update_rendering_server(const RID& p_body, PhysicsServer3DRenderingServerHandler* p_rendering_server_handler) {
-}
+void Box3DPhysicsServer3D::_soft_body_update_rendering_server(
+	const RID& p_body, PhysicsServer3DRenderingServerHandler* p_rendering_server_handler) {}
 
-void Box3DPhysicsServer3D::_soft_body_set_space(const RID& p_body, const RID& p_space) {
-}
+void Box3DPhysicsServer3D::_soft_body_set_space(const RID& p_body, const RID& p_space) {}
 
 RID Box3DPhysicsServer3D::_soft_body_get_space(const RID& p_body) const {
 	return RID();
 }
 
-void Box3DPhysicsServer3D::_soft_body_set_ray_pickable(const RID& p_body, bool p_enable) {
-}
+void Box3DPhysicsServer3D::_soft_body_set_ray_pickable(const RID& p_body, bool p_enable) {}
 
-void Box3DPhysicsServer3D::_soft_body_set_collision_layer(const RID& p_body, uint32_t p_layer) {
-}
+void Box3DPhysicsServer3D::_soft_body_set_collision_layer(const RID& p_body, uint32_t p_layer) {}
 
 uint32_t Box3DPhysicsServer3D::_soft_body_get_collision_layer(const RID& p_body) const {
 	return 0;
 }
 
-void Box3DPhysicsServer3D::_soft_body_set_collision_mask(const RID& p_body, uint32_t p_mask) {
-}
+void Box3DPhysicsServer3D::_soft_body_set_collision_mask(const RID& p_body, uint32_t p_mask) {}
 
 uint32_t Box3DPhysicsServer3D::_soft_body_get_collision_mask(const RID& p_body) const {
 	return 0;
 }
 
-void Box3DPhysicsServer3D::_soft_body_add_collision_exception(const RID& p_body, const RID& p_excepted_body) {
-}
+void Box3DPhysicsServer3D::_soft_body_add_collision_exception(const RID& p_body, const RID& p_excepted_body) {}
 
-void Box3DPhysicsServer3D::_soft_body_remove_collision_exception(const RID& p_body, const RID& p_excepted_body) {
-}
+void Box3DPhysicsServer3D::_soft_body_remove_collision_exception(const RID& p_body, const RID& p_excepted_body) {}
 
 TypedArray<RID> Box3DPhysicsServer3D::_soft_body_get_collision_exceptions(const RID& p_body) const {
 	return TypedArray<RID>();
 }
 
-void Box3DPhysicsServer3D::_soft_body_set_state(const RID& p_body, PhysicsServer3D::BodyState p_state, const Variant& p_variant) {
-}
+void Box3DPhysicsServer3D::_soft_body_set_state(const RID& p_body, PhysicsServer3D::BodyState p_state,
+												const Variant& p_variant) {}
 
 Variant Box3DPhysicsServer3D::_soft_body_get_state(const RID& p_body, PhysicsServer3D::BodyState p_state) const {
 	return Variant();
 }
 
-void Box3DPhysicsServer3D::_soft_body_set_transform(const RID& p_body, const Transform3D& p_transform) {
-}
+void Box3DPhysicsServer3D::_soft_body_set_transform(const RID& p_body, const Transform3D& p_transform) {}
 
-void Box3DPhysicsServer3D::_soft_body_set_simulation_precision(const RID& p_body, int32_t p_simulation_precision) {
-}
+void Box3DPhysicsServer3D::_soft_body_set_simulation_precision(const RID& p_body, int32_t p_simulation_precision) {}
 
 int32_t Box3DPhysicsServer3D::_soft_body_get_simulation_precision(const RID& p_body) const {
 	return 0;
 }
 
-void Box3DPhysicsServer3D::_soft_body_set_total_mass(const RID& p_body, double p_total_mass) {
-}
+void Box3DPhysicsServer3D::_soft_body_set_total_mass(const RID& p_body, double p_total_mass) {}
 
 double Box3DPhysicsServer3D::_soft_body_get_total_mass(const RID& p_body) const {
 	return 0.0;
 }
 
-void Box3DPhysicsServer3D::_soft_body_set_linear_stiffness(const RID& p_body, double p_stiffness) {
-}
+void Box3DPhysicsServer3D::_soft_body_set_linear_stiffness(const RID& p_body, double p_stiffness) {}
 
 double Box3DPhysicsServer3D::_soft_body_get_linear_stiffness(const RID& p_body) const {
 	return 0.0;
 }
 
-void Box3DPhysicsServer3D::_soft_body_set_pressure_coefficient(const RID& p_body, double p_pressure_coefficient) {
-}
+void Box3DPhysicsServer3D::_soft_body_set_pressure_coefficient(const RID& p_body, double p_pressure_coefficient) {}
 
 double Box3DPhysicsServer3D::_soft_body_get_pressure_coefficient(const RID& p_body) const {
 	return 0.0;
 }
 
-void Box3DPhysicsServer3D::_soft_body_set_damping_coefficient(const RID& p_body, double p_damping_coefficient) {
-}
+void Box3DPhysicsServer3D::_soft_body_set_damping_coefficient(const RID& p_body, double p_damping_coefficient) {}
 
 double Box3DPhysicsServer3D::_soft_body_get_damping_coefficient(const RID& p_body) const {
 	return 0.0;
 }
 
-void Box3DPhysicsServer3D::_soft_body_set_drag_coefficient(const RID& p_body, double p_drag_coefficient) {
-}
+void Box3DPhysicsServer3D::_soft_body_set_drag_coefficient(const RID& p_body, double p_drag_coefficient) {}
 
 double Box3DPhysicsServer3D::_soft_body_get_drag_coefficient(const RID& p_body) const {
 	return 0.0;
 }
 
-void Box3DPhysicsServer3D::_soft_body_set_mesh(const RID& p_body, const RID& p_mesh) {
-}
+void Box3DPhysicsServer3D::_soft_body_set_mesh(const RID& p_body, const RID& p_mesh) {}
 
 AABB Box3DPhysicsServer3D::_soft_body_get_bounds(const RID& p_body) const {
 	return AABB();
 }
 
-void Box3DPhysicsServer3D::_soft_body_move_point(const RID& p_body, int32_t p_point_index, const Vector3& p_global_position) {
-}
+void Box3DPhysicsServer3D::_soft_body_move_point(const RID& p_body, int32_t p_point_index,
+												 const Vector3& p_global_position) {}
 
 Vector3 Box3DPhysicsServer3D::_soft_body_get_point_global_position(const RID& p_body, int32_t p_point_index) const {
 	return Vector3();
 }
 
-void Box3DPhysicsServer3D::_soft_body_remove_all_pinned_points(const RID& p_body) {
-}
+void Box3DPhysicsServer3D::_soft_body_remove_all_pinned_points(const RID& p_body) {}
 
-void Box3DPhysicsServer3D::_soft_body_pin_point(const RID& p_body, int32_t p_point_index, bool p_pin) {
-}
+void Box3DPhysicsServer3D::_soft_body_pin_point(const RID& p_body, int32_t p_point_index, bool p_pin) {}
 
 bool Box3DPhysicsServer3D::_soft_body_is_point_pinned(const RID& p_body, int32_t p_point_index) const {
 	return false;
@@ -1328,8 +1386,7 @@ void Box3DPhysicsServer3D::_set_active(bool p_active) {
 	active = p_active;
 }
 
-void Box3DPhysicsServer3D::_init() {
-}
+void Box3DPhysicsServer3D::_init() {}
 
 void Box3DPhysicsServer3D::_step(double p_step) {
 	if (!active) {
@@ -1340,8 +1397,7 @@ void Box3DPhysicsServer3D::_step(double p_step) {
 	}
 }
 
-void Box3DPhysicsServer3D::_sync() {
-}
+void Box3DPhysicsServer3D::_sync() {}
 
 void Box3DPhysicsServer3D::_flush_queries() {
 	if (!active) {
@@ -1352,11 +1408,9 @@ void Box3DPhysicsServer3D::_flush_queries() {
 	}
 }
 
-void Box3DPhysicsServer3D::_end_sync() {
-}
+void Box3DPhysicsServer3D::_end_sync() {}
 
-void Box3DPhysicsServer3D::_finish() {
-}
+void Box3DPhysicsServer3D::_finish() {}
 
 bool Box3DPhysicsServer3D::_is_flushing_queries() const {
 	for (Box3DSpace3D* space : active_spaces) {
@@ -1372,17 +1426,17 @@ int32_t Box3DPhysicsServer3D::_get_process_info(PhysicsServer3D::ProcessInfo p_p
 	for (const Box3DSpace3D* space : active_spaces) {
 		const b3Counters counters = b3World_GetCounters(space->get_world_id());
 		switch (p_process_info) {
-			case PhysicsServer3D::INFO_ACTIVE_OBJECTS:
-				total += counters.bodyCount;
-				break;
-			case PhysicsServer3D::INFO_COLLISION_PAIRS:
-				total += counters.contactCount;
-				break;
-			case PhysicsServer3D::INFO_ISLAND_COUNT:
-				total += counters.islandCount;
-				break;
-			default:
-				break;
+		case PhysicsServer3D::INFO_ACTIVE_OBJECTS:
+			total += counters.bodyCount;
+			break;
+		case PhysicsServer3D::INFO_COLLISION_PAIRS:
+			total += counters.contactCount;
+			break;
+		case PhysicsServer3D::INFO_ISLAND_COUNT:
+			total += counters.islandCount;
+			break;
+		default:
+			break;
 		}
 	}
 	return total;

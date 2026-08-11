@@ -6,11 +6,20 @@
 #include "../objects/box3d_body_impl_3d.hpp"
 #include "../objects/box3d_shaped_object_impl_3d.hpp"
 #include "../servers/box3d_physics_server_3d.hpp"
+#include "../shapes/box3d_capsule_shape_impl_3d.hpp"
 #include "../shapes/box3d_shape_impl_3d.hpp"
+#include "../shapes/box3d_shape_instance_3d.hpp"
+#include "../shapes/box3d_sphere_shape_impl_3d.hpp"
 #include "box3d_query_filter_3d.hpp"
 #include "box3d_space_3d.hpp"
 
 #include <box3d/box3d.h>
+
+#include <godot_cpp/templates/local_vector.hpp>
+#include <godot_cpp/variant/packed_float32_array.hpp>
+#include <godot_cpp/variant/packed_int32_array.hpp>
+#include <godot_cpp/variant/packed_int64_array.hpp>
+#include <godot_cpp/variant/packed_vector3_array.hpp>
 
 namespace {
 
@@ -57,6 +66,111 @@ bool overlap_result_fcn(b3ShapeId p_shape_id, void* p_context) {
 	result.collider_id = object->get_instance_id();
 	result.shape = 0;
 	ctx->count++;
+	return true;
+}
+
+struct MoverPlaneHit {
+	b3PlaneResult result{};
+	Box3DShapedObjectImpl3D* object = nullptr;
+	int32_t collider_shape = 0;
+};
+
+struct MoverPlaneContext {
+	const Box3DQueryFilter3D* filter = nullptr;
+	LocalVector<MoverPlaneHit> hits;
+	int32_t max_hits = 0;
+};
+
+bool mover_plane_result_fcn(b3ShapeId p_shape_id, const b3PlaneResult* p_planes, int p_plane_count, void* p_context) {
+	auto* ctx = static_cast<MoverPlaneContext*>(p_context);
+	const b3BodyId body_id = b3Shape_GetBody(p_shape_id);
+	Box3DShapedObjectImpl3D* object = nullptr;
+	if (!should_report(b3Body_GetUserData(body_id), *ctx->filter, object)) {
+		return true;
+	}
+
+	const auto* shape_instance = static_cast<const Box3DShapeInstance3D*>(b3Shape_GetUserData(p_shape_id));
+	const int32_t collider_shape = shape_instance != nullptr ? (int32_t)shape_instance->get_index() : 0;
+
+	for (int i = 0; i < p_plane_count && (int32_t)ctx->hits.size() < ctx->max_hits; i++) {
+		MoverPlaneHit hit;
+		hit.result = p_planes[i];
+		hit.object = object;
+		hit.collider_shape = collider_shape;
+		ctx->hits.push_back(hit);
+	}
+	return (int32_t)ctx->hits.size() < ctx->max_hits;
+}
+
+bool mover_filter_fcn(b3ShapeId p_shape_id, void* p_context) {
+	const auto* filter = static_cast<const Box3DQueryFilter3D*>(p_context);
+	const b3BodyId body_id = b3Shape_GetBody(p_shape_id);
+	Box3DShapedObjectImpl3D* object = nullptr;
+	return should_report(b3Body_GetUserData(body_id), *filter, object);
+}
+
+Box3DQueryFilter3D make_mover_filter(const Box3DShapedObjectImpl3D& p_body, const TypedArray<RID>& p_exclude) {
+	Box3DQueryFilter3D filter;
+	const b3Filter body_filter = godot_to_b3_filter(p_body.get_collision_layer(), p_body.get_collision_mask());
+	filter.filter.categoryBits = body_filter.categoryBits;
+	filter.filter.maskBits = body_filter.maskBits;
+	filter.exclude.insert(p_body.get_rid());
+	for (int32_t i = 0; i < p_exclude.size(); i++) {
+		filter.exclude.insert((RID)p_exclude[i]);
+	}
+	if (const auto* body = dynamic_cast<const Box3DBodyImpl3D*>(&p_body)) {
+		for (const KeyValue<RID, Box3DFilterJointImpl3D*>& entry : body->get_collision_exceptions()) {
+			filter.exclude.insert(entry.key);
+		}
+	}
+	return filter;
+}
+
+bool try_build_mover_capsule(const Box3DShapedObjectImpl3D& p_body, const Transform3D& p_transform, double p_margin,
+							 b3Pos& r_origin, b3Capsule& r_mover, int32_t& r_local_shape) {
+	int32_t shape_index = -1;
+	for (int32_t i = 0; i < p_body.get_shape_count(); i++) {
+		if (p_body.is_shape_disabled(i)) {
+			continue;
+		}
+		if (shape_index != -1) {
+			return false;
+		}
+		shape_index = i;
+	}
+	if (shape_index == -1) {
+		return false;
+	}
+
+	const Box3DShapeImpl3D* shape = p_body.get_shape(shape_index);
+	const Transform3D shape_transform = p_transform * p_body.get_shape_transform(shape_index);
+	const Vector3 origin = p_transform.origin;
+	const float margin = (float)MAX(p_margin, 0.0);
+
+	switch (shape->get_type()) {
+	case PhysicsServer3D::SHAPE_CAPSULE: {
+		const auto* capsule = static_cast<const Box3DCapsuleShapeImpl3D*>(shape);
+		const float radius = (float)capsule->get_radius();
+		const float half_segment = MAX(0.0f, (float)capsule->get_height() * 0.5f - radius);
+		r_mover.center1 = godot_to_b3(shape_transform.xform(Vector3(0, half_segment, 0)) - origin);
+		r_mover.center2 = godot_to_b3(shape_transform.xform(Vector3(0, -half_segment, 0)) - origin);
+		r_mover.radius = radius + margin;
+		break;
+	}
+	case PhysicsServer3D::SHAPE_SPHERE: {
+		const auto* sphere = static_cast<const Box3DSphereShapeImpl3D*>(shape);
+		const b3Vec3 center = godot_to_b3(shape_transform.origin - origin);
+		r_mover.center1 = center;
+		r_mover.center2 = center;
+		r_mover.radius = (float)sphere->get_radius() + margin;
+		break;
+	}
+	default:
+		return false;
+	}
+
+	r_origin = godot_to_b3(origin);
+	r_local_shape = shape_index;
 	return true;
 }
 
@@ -123,7 +237,8 @@ struct RayContext {
 	float fraction = 1.0f;
 };
 
-float cast_result_fcn(b3ShapeId p_shape_id, b3Pos p_point, b3Vec3 p_normal, float p_fraction, uint64_t, int, int, void* p_context) {
+float cast_result_fcn(b3ShapeId p_shape_id, b3Pos p_point, b3Vec3 p_normal, float p_fraction, uint64_t, int, int,
+					  void* p_context) {
 	auto* ctx = static_cast<RayContext*>(p_context);
 
 	const b3BodyId body_id = b3Shape_GetBody(p_shape_id);
@@ -142,16 +257,11 @@ float cast_result_fcn(b3ShapeId p_shape_id, b3Pos p_point, b3Vec3 p_normal, floa
 
 } // namespace
 
-bool Box3DPhysicsDirectSpaceState3D::_intersect_ray(
-		const Vector3& p_from,
-		const Vector3& p_to,
-		uint32_t p_collision_mask,
-		bool p_collide_with_bodies,
-		bool p_collide_with_areas,
-		bool p_hit_from_inside,
-		bool p_hit_back_faces,
-		bool p_pick_ray,
-		PhysicsServer3DExtensionRayResult* p_result) {
+bool Box3DPhysicsDirectSpaceState3D::_intersect_ray(const Vector3& p_from, const Vector3& p_to,
+													uint32_t p_collision_mask, bool p_collide_with_bodies,
+													bool p_collide_with_areas, bool p_hit_from_inside,
+													bool p_hit_back_faces, bool p_pick_ray,
+													PhysicsServer3DExtensionRayResult* p_result) {
 	ERR_FAIL_NULL_V(space, false);
 
 	Box3DQueryFilter3D filter(p_collision_mask, p_collide_with_bodies, p_collide_with_areas);
@@ -184,13 +294,10 @@ bool Box3DPhysicsDirectSpaceState3D::_intersect_ray(
 	return true;
 }
 
-int32_t Box3DPhysicsDirectSpaceState3D::_intersect_point(
-		const Vector3& p_position,
-		uint32_t p_collision_mask,
-		bool p_collide_with_bodies,
-		bool p_collide_with_areas,
-		PhysicsServer3DExtensionShapeResult* p_results,
-		int32_t p_max_results) {
+int32_t Box3DPhysicsDirectSpaceState3D::_intersect_point(const Vector3& p_position, uint32_t p_collision_mask,
+														 bool p_collide_with_bodies, bool p_collide_with_areas,
+														 PhysicsServer3DExtensionShapeResult* p_results,
+														 int32_t p_max_results) {
 	ERR_FAIL_NULL_V(space, 0);
 
 	Box3DQueryFilter3D filter(p_collision_mask, p_collide_with_bodies, p_collide_with_areas);
@@ -212,16 +319,12 @@ int32_t Box3DPhysicsDirectSpaceState3D::_intersect_point(
 	return context.count;
 }
 
-int32_t Box3DPhysicsDirectSpaceState3D::_intersect_shape(
-		const RID& p_shape_rid,
-		const Transform3D& p_transform,
-		const Vector3& p_motion,
-		double p_margin,
-		uint32_t p_collision_mask,
-		bool p_collide_with_bodies,
-		bool p_collide_with_areas,
-		PhysicsServer3DExtensionShapeResult* p_results,
-		int32_t p_max_results) {
+int32_t Box3DPhysicsDirectSpaceState3D::_intersect_shape(const RID& p_shape_rid, const Transform3D& p_transform,
+														 const Vector3& p_motion, double p_margin,
+														 uint32_t p_collision_mask, bool p_collide_with_bodies,
+														 bool p_collide_with_areas,
+														 PhysicsServer3DExtensionShapeResult* p_results,
+														 int32_t p_max_results) {
 	ERR_FAIL_NULL_V(space, 0);
 
 	Box3DShapeImpl3D* shape = Box3DPhysicsServer3D::get_singleton()->get_shape(p_shape_rid);
@@ -240,22 +343,17 @@ int32_t Box3DPhysicsDirectSpaceState3D::_intersect_shape(
 	context.results = p_results;
 	context.max_results = p_max_results;
 
-	b3World_OverlapShape(space->get_world_id(), b3Vec3_zero, &shape_proxy.get_proxy(), filter.filter, overlap_result_fcn, &context);
+	b3World_OverlapShape(space->get_world_id(), b3Vec3_zero, &shape_proxy.get_proxy(), filter.filter,
+						 overlap_result_fcn, &context);
 
 	return context.count;
 }
 
-bool Box3DPhysicsDirectSpaceState3D::_cast_motion(
-		const RID& p_shape_rid,
-		const Transform3D& p_transform,
-		const Vector3& p_motion,
-		double p_margin,
-		uint32_t p_collision_mask,
-		bool p_collide_with_bodies,
-		bool p_collide_with_areas,
-		float* p_closest_safe,
-		float* p_closest_unsafe,
-		PhysicsServer3DExtensionShapeRestInfo* p_info) {
+bool Box3DPhysicsDirectSpaceState3D::_cast_motion(const RID& p_shape_rid, const Transform3D& p_transform,
+												  const Vector3& p_motion, double p_margin, uint32_t p_collision_mask,
+												  bool p_collide_with_bodies, bool p_collide_with_areas,
+												  float* p_closest_safe, float* p_closest_unsafe,
+												  PhysicsServer3DExtensionShapeRestInfo* p_info) {
 	ERR_FAIL_NULL_V(space, false);
 
 	Box3DShapeImpl3D* shape = Box3DPhysicsServer3D::get_singleton()->get_shape(p_shape_rid);
@@ -274,7 +372,8 @@ bool Box3DPhysicsDirectSpaceState3D::_cast_motion(
 	RayContext context;
 	context.filter = &filter;
 
-	b3World_CastShape(space->get_world_id(), b3Vec3_zero, &shape_proxy.get_proxy(), godot_to_b3(p_motion), filter.filter, cast_result_fcn, &context);
+	b3World_CastShape(space->get_world_id(), b3Vec3_zero, &shape_proxy.get_proxy(), godot_to_b3(p_motion),
+					  filter.filter, cast_result_fcn, &context);
 
 	if (!context.has_hit) {
 		*p_closest_safe = 1.0;
@@ -287,17 +386,10 @@ bool Box3DPhysicsDirectSpaceState3D::_cast_motion(
 	return true;
 }
 
-bool Box3DPhysicsDirectSpaceState3D::_collide_shape(
-		const RID& p_shape_rid,
-		const Transform3D& p_transform,
-		const Vector3& p_motion,
-		double p_margin,
-		uint32_t p_collision_mask,
-		bool p_collide_with_bodies,
-		bool p_collide_with_areas,
-		void* p_results,
-		int32_t p_max_results,
-		int32_t* p_result_count) {
+bool Box3DPhysicsDirectSpaceState3D::_collide_shape(const RID& p_shape_rid, const Transform3D& p_transform,
+													const Vector3& p_motion, double p_margin, uint32_t p_collision_mask,
+													bool p_collide_with_bodies, bool p_collide_with_areas,
+													void* p_results, int32_t p_max_results, int32_t* p_result_count) {
 	*p_result_count = 0;
 	ERR_FAIL_NULL_V(space, false);
 	if (p_max_results <= 0) {
@@ -321,22 +413,17 @@ bool Box3DPhysicsDirectSpaceState3D::_collide_shape(
 	context.results = static_cast<Vector3*>(p_results);
 	context.max_results = p_max_results;
 
-	b3World_OverlapShape(
-			space->get_world_id(), b3Vec3_zero, &shape_proxy.get_proxy(), filter.filter, collide_shape_result_fcn, &context);
+	b3World_OverlapShape(space->get_world_id(), b3Vec3_zero, &shape_proxy.get_proxy(), filter.filter,
+						 collide_shape_result_fcn, &context);
 
 	*p_result_count = context.count;
 	return context.count > 0;
 }
 
-bool Box3DPhysicsDirectSpaceState3D::_rest_info(
-		const RID& p_shape_rid,
-		const Transform3D& p_transform,
-		const Vector3& p_motion,
-		double p_margin,
-		uint32_t p_collision_mask,
-		bool p_collide_with_bodies,
-		bool p_collide_with_areas,
-		PhysicsServer3DExtensionShapeRestInfo* p_info) {
+bool Box3DPhysicsDirectSpaceState3D::_rest_info(const RID& p_shape_rid, const Transform3D& p_transform,
+												const Vector3& p_motion, double p_margin, uint32_t p_collision_mask,
+												bool p_collide_with_bodies, bool p_collide_with_areas,
+												PhysicsServer3DExtensionShapeRestInfo* p_info) {
 	ERR_FAIL_NULL_V(space, false);
 
 	Box3DShapeImpl3D* shape = Box3DPhysicsServer3D::get_singleton()->get_shape(p_shape_rid);
@@ -353,7 +440,8 @@ bool Box3DPhysicsDirectSpaceState3D::_rest_info(
 	RayContext context;
 	context.filter = &filter;
 
-	b3World_CastShape(space->get_world_id(), b3Vec3_zero, &shape_proxy.get_proxy(), godot_to_b3(p_motion), filter.filter, cast_result_fcn, &context);
+	b3World_CastShape(space->get_world_id(), b3Vec3_zero, &shape_proxy.get_proxy(), godot_to_b3(p_motion),
+					  filter.filter, cast_result_fcn, &context);
 
 	if (!context.has_hit) {
 		return false;
@@ -379,7 +467,8 @@ bool Box3DPhysicsDirectSpaceState3D::_rest_info(
 	return true;
 }
 
-Vector3 Box3DPhysicsDirectSpaceState3D::_get_closest_point_to_object_volume(const RID& p_object, const Vector3& p_point) const {
+Vector3 Box3DPhysicsDirectSpaceState3D::_get_closest_point_to_object_volume(const RID& p_object,
+																			const Vector3& p_point) const {
 	Box3DShapedObjectImpl3D* object = Box3DPhysicsServer3D::get_singleton()->get_body(p_object);
 	if (object == nullptr) {
 		object = Box3DPhysicsServer3D::get_singleton()->get_area(p_object);
@@ -393,14 +482,89 @@ Vector3 Box3DPhysicsDirectSpaceState3D::_get_closest_point_to_object_volume(cons
 	return b3_to_godot(result_point);
 }
 
-bool Box3DPhysicsDirectSpaceState3D::test_body_motion(
-		Box3DShapedObjectImpl3D& p_body,
-		const Transform3D& p_transform,
-		const Vector3& p_motion,
-		double p_margin,
-		int32_t p_max_collisions,
-		bool p_recovery_as_collision,
-		PhysicsServer3DExtensionMotionResult* p_result) const {
+Dictionary Box3DPhysicsDirectSpaceState3D::collide_mover(const Box3DShapedObjectImpl3D& p_body,
+														 const Transform3D& p_transform, double p_margin,
+														 int32_t p_max_results,
+														 const TypedArray<RID>& p_exclude) const {
+	Dictionary result;
+	PackedVector3Array normals;
+	PackedVector3Array points;
+	PackedFloat32Array offsets;
+	PackedInt64Array collider_ids;
+	PackedInt32Array local_shapes;
+	PackedInt32Array collider_shapes;
+	TypedArray<RID> colliders;
+
+	result["normals"] = normals;
+	result["points"] = points;
+	result["offsets"] = offsets;
+	result["collider_ids"] = collider_ids;
+	result["local_shapes"] = local_shapes;
+	result["collider_shapes"] = collider_shapes;
+	result["colliders"] = colliders;
+
+	ERR_FAIL_NULL_V(space, result);
+	p_max_results = CLAMP(p_max_results, 0, 32);
+	if (p_max_results == 0) {
+		return result;
+	}
+
+	b3Pos origin{};
+	b3Capsule mover{};
+	int32_t local_shape = -1;
+	if (!try_build_mover_capsule(p_body, p_transform, p_margin, origin, mover, local_shape)) {
+		return result;
+	}
+
+	const Box3DQueryFilter3D filter = make_mover_filter(p_body, p_exclude);
+	MoverPlaneContext context;
+	context.filter = &filter;
+	context.max_hits = p_max_results;
+
+	b3World_CollideMover(space->get_world_id(), origin, &mover, filter.filter, mover_plane_result_fcn, &context);
+
+	const Vector3 world_origin = b3_to_godot(origin);
+	for (const MoverPlaneHit& hit : context.hits) {
+		normals.push_back(b3_to_godot(hit.result.plane.normal));
+		points.push_back(world_origin + b3_to_godot(hit.result.point));
+		offsets.push_back(hit.result.plane.offset);
+		collider_ids.push_back((int64_t)hit.object->get_instance_id());
+		local_shapes.push_back(local_shape);
+		collider_shapes.push_back(hit.collider_shape);
+		colliders.push_back(hit.object->get_rid());
+	}
+
+	result["normals"] = normals;
+	result["points"] = points;
+	result["offsets"] = offsets;
+	result["collider_ids"] = collider_ids;
+	result["local_shapes"] = local_shapes;
+	result["collider_shapes"] = collider_shapes;
+	result["colliders"] = colliders;
+	return result;
+}
+
+double Box3DPhysicsDirectSpaceState3D::cast_mover(const Box3DShapedObjectImpl3D& p_body, const Transform3D& p_transform,
+												  const Vector3& p_motion, double p_margin,
+												  const TypedArray<RID>& p_exclude) const {
+	ERR_FAIL_NULL_V(space, 1.0);
+
+	b3Pos origin{};
+	b3Capsule mover{};
+	int32_t local_shape = -1;
+	if (!try_build_mover_capsule(p_body, p_transform, p_margin, origin, mover, local_shape)) {
+		return 1.0;
+	}
+
+	Box3DQueryFilter3D filter = make_mover_filter(p_body, p_exclude);
+	return b3World_CastMover(space->get_world_id(), origin, &mover, godot_to_b3(p_motion), filter.filter,
+							 mover_filter_fcn, &filter);
+}
+
+bool Box3DPhysicsDirectSpaceState3D::test_body_motion(Box3DShapedObjectImpl3D& p_body, const Transform3D& p_transform,
+													  const Vector3& p_motion, double p_margin,
+													  int32_t p_max_collisions, bool p_recovery_as_collision,
+													  PhysicsServer3DExtensionMotionResult* p_result) const {
 	ERR_FAIL_NULL_V(space, false);
 
 	p_result->travel = Vector3();
@@ -437,7 +601,8 @@ bool Box3DPhysicsDirectSpaceState3D::test_body_motion(
 	RayContext context;
 	context.filter = &filter;
 
-	b3World_CastShape(space->get_world_id(), b3Vec3_zero, &shape_proxy.get_proxy(), godot_to_b3(p_motion), filter.filter, cast_result_fcn, &context);
+	b3World_CastShape(space->get_world_id(), b3Vec3_zero, &shape_proxy.get_proxy(), godot_to_b3(p_motion),
+					  filter.filter, cast_result_fcn, &context);
 
 	if (!context.has_hit) {
 		p_result->travel = p_motion;

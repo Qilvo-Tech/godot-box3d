@@ -5,6 +5,8 @@
 #include <godot_cpp/classes/physics_direct_body_state3d.hpp>
 #include <godot_cpp/classes/physics_server3d_extension.hpp>
 #include <godot_cpp/classes/physics_server3d_rendering_server_handler.hpp>
+#include <godot_cpp/variant/dictionary.hpp>
+#include <godot_cpp/variant/typed_array.hpp>
 
 using namespace godot;
 
@@ -20,7 +22,7 @@ class Box3DSpace3D;
 class Box3DPhysicsServer3D final : public PhysicsServer3DExtension {
 	GDCLASS(Box3DPhysicsServer3D, PhysicsServer3DExtension)
 
-public:
+  public:
 	static Box3DPhysicsServer3D* get_singleton() { return singleton; }
 
 	Box3DPhysicsServer3D();
@@ -36,6 +38,15 @@ public:
 	Box3DSpace3D* get_space(const RID& p_rid) const { return space_owner.get_or_null(p_rid); }
 
 	Box3DJointImpl3D* get_joint(const RID& p_rid) const { return joint_owner.get_or_null(p_rid); }
+
+	// Box3D-native capsule mover queries. These use the same Box3D world as the
+	// PhysicsServer3D backend and expose the planes/fraction needed by a
+	// deterministic client/server character mover.
+	static Dictionary body_collide_mover(const RID& p_body, const Transform3D& p_from, double p_margin,
+										 int32_t p_max_results, const TypedArray<RID>& p_exclude);
+
+	static double body_cast_mover(const RID& p_body, const Transform3D& p_from, const Vector3& p_motion,
+								  double p_margin, const TypedArray<RID>& p_exclude);
 
 	// --- Shapes ---
 	RID _world_boundary_shape_create() override;
@@ -72,7 +83,8 @@ public:
 	RID _area_create() override;
 	void _area_set_space(const RID& p_area, const RID& p_space) override;
 	RID _area_get_space(const RID& p_area) const override;
-	void _area_add_shape(const RID& p_area, const RID& p_shape, const Transform3D& p_transform, bool p_disabled) override;
+	void _area_add_shape(const RID& p_area, const RID& p_shape, const Transform3D& p_transform,
+						 bool p_disabled) override;
 	void _area_set_shape(const RID& p_area, int32_t p_shape_idx, const RID& p_shape) override;
 	void _area_set_shape_transform(const RID& p_area, int32_t p_shape_idx, const Transform3D& p_transform) override;
 	void _area_set_shape_disabled(const RID& p_area, int32_t p_shape_idx, bool p_disabled) override;
@@ -102,7 +114,8 @@ public:
 	RID _body_get_space(const RID& p_body) const override;
 	void _body_set_mode(const RID& p_body, PhysicsServer3D::BodyMode p_mode) override;
 	PhysicsServer3D::BodyMode _body_get_mode(const RID& p_body) const override;
-	void _body_add_shape(const RID& p_body, const RID& p_shape, const Transform3D& p_transform, bool p_disabled) override;
+	void _body_add_shape(const RID& p_body, const RID& p_shape, const Transform3D& p_transform,
+						 bool p_disabled) override;
 	void _body_set_shape(const RID& p_body, int32_t p_shape_idx, const RID& p_shape) override;
 	void _body_set_shape_transform(const RID& p_body, int32_t p_shape_idx, const Transform3D& p_transform) override;
 	void _body_set_shape_disabled(const RID& p_body, int32_t p_shape_idx, bool p_disabled) override;
@@ -154,18 +167,13 @@ public:
 	void _body_set_omit_force_integration(const RID& p_body, bool p_enable) override;
 	bool _body_is_omitting_force_integration(const RID& p_body) const override;
 	void _body_set_state_sync_callback(const RID& p_body, const Callable& p_callable) override;
-	void _body_set_force_integration_callback(const RID& p_body, const Callable& p_callable, const Variant& p_userdata) override;
+	void _body_set_force_integration_callback(const RID& p_body, const Callable& p_callable,
+											  const Variant& p_userdata) override;
 	void _body_set_ray_pickable(const RID& p_body, bool p_enable) override;
 
-	bool _body_test_motion(
-			const RID& p_body,
-			const Transform3D& p_from,
-			const Vector3& p_motion,
-			double p_margin,
-			int32_t p_max_collisions,
-			bool p_collide_separation_ray,
-			bool p_recovery_as_collision,
-			PhysicsServer3DExtensionMotionResult* p_result) const override;
+	bool _body_test_motion(const RID& p_body, const Transform3D& p_from, const Vector3& p_motion, double p_margin,
+						   int32_t p_max_collisions, bool p_collide_separation_ray, bool p_recovery_as_collision,
+						   PhysicsServer3DExtensionMotionResult* p_result) const override;
 
 	PhysicsDirectBodyState3D* _body_get_direct_state(const RID& p_body) override;
 
@@ -173,7 +181,8 @@ public:
 	RID _joint_create() override;
 	void _joint_clear(const RID& p_joint) override;
 
-	void _joint_make_pin(const RID& p_joint, const RID& p_body_a, const Vector3& p_local_a, const RID& p_body_b, const Vector3& p_local_b) override;
+	void _joint_make_pin(const RID& p_joint, const RID& p_body_a, const Vector3& p_local_a, const RID& p_body_b,
+						 const Vector3& p_local_b) override;
 	void _pin_joint_set_param(const RID& p_joint, PhysicsServer3D::PinJointParam p_param, double p_value) override;
 	double _pin_joint_get_param(const RID& p_joint, PhysicsServer3D::PinJointParam p_param) const override;
 	void _pin_joint_set_local_a(const RID& p_joint, const Vector3& p_local_a) override;
@@ -181,27 +190,39 @@ public:
 	void _pin_joint_set_local_b(const RID& p_joint, const Vector3& p_local_b) override;
 	Vector3 _pin_joint_get_local_b(const RID& p_joint) const override;
 
-	void _joint_make_hinge(const RID& p_joint, const RID& p_body_a, const Transform3D& p_hinge_a, const RID& p_body_b, const Transform3D& p_hinge_b) override;
-	void _joint_make_hinge_simple(const RID& p_joint, const RID& p_body_a, const Vector3& p_pivot_a, const Vector3& p_axis_a, const RID& p_body_b, const Vector3& p_pivot_b, const Vector3& p_axis_b) override;
+	void _joint_make_hinge(const RID& p_joint, const RID& p_body_a, const Transform3D& p_hinge_a, const RID& p_body_b,
+						   const Transform3D& p_hinge_b) override;
+	void _joint_make_hinge_simple(const RID& p_joint, const RID& p_body_a, const Vector3& p_pivot_a,
+								  const Vector3& p_axis_a, const RID& p_body_b, const Vector3& p_pivot_b,
+								  const Vector3& p_axis_b) override;
 	void _hinge_joint_set_param(const RID& p_joint, PhysicsServer3D::HingeJointParam p_param, double p_value) override;
 	double _hinge_joint_get_param(const RID& p_joint, PhysicsServer3D::HingeJointParam p_param) const override;
 	void _hinge_joint_set_flag(const RID& p_joint, PhysicsServer3D::HingeJointFlag p_flag, bool p_enabled) override;
 	bool _hinge_joint_get_flag(const RID& p_joint, PhysicsServer3D::HingeJointFlag p_flag) const override;
 
-	void _joint_make_slider(const RID& p_joint, const RID& p_body_a, const Transform3D& p_local_ref_a, const RID& p_body_b, const Transform3D& p_local_ref_b) override;
-	void _slider_joint_set_param(const RID& p_joint, PhysicsServer3D::SliderJointParam p_param, double p_value) override;
+	void _joint_make_slider(const RID& p_joint, const RID& p_body_a, const Transform3D& p_local_ref_a,
+							const RID& p_body_b, const Transform3D& p_local_ref_b) override;
+	void _slider_joint_set_param(const RID& p_joint, PhysicsServer3D::SliderJointParam p_param,
+								 double p_value) override;
 	double _slider_joint_get_param(const RID& p_joint, PhysicsServer3D::SliderJointParam p_param) const override;
 
-	// Non-goal joint types: create nothing and warn loudly rather than silently no-op.
-	void _joint_make_cone_twist(const RID& p_joint, const RID& p_body_a, const Transform3D& p_local_ref_a, const RID& p_body_b, const Transform3D& p_local_ref_b) override;
-	void _cone_twist_joint_set_param(const RID& p_joint, PhysicsServer3D::ConeTwistJointParam p_param, double p_value) override;
+	void _joint_make_cone_twist(const RID& p_joint, const RID& p_body_a, const Transform3D& p_local_ref_a,
+								const RID& p_body_b, const Transform3D& p_local_ref_b) override;
+	void _cone_twist_joint_set_param(const RID& p_joint, PhysicsServer3D::ConeTwistJointParam p_param,
+									 double p_value) override;
 	double _cone_twist_joint_get_param(const RID& p_joint, PhysicsServer3D::ConeTwistJointParam p_param) const override;
 
-	void _joint_make_generic_6dof(const RID& p_joint, const RID& p_body_a, const Transform3D& p_local_ref_a, const RID& p_body_b, const Transform3D& p_local_ref_b) override;
-	void _generic_6dof_joint_set_param(const RID& p_joint, Vector3::Axis p_axis, PhysicsServer3D::G6DOFJointAxisParam p_param, double p_value) override;
-	double _generic_6dof_joint_get_param(const RID& p_joint, Vector3::Axis p_axis, PhysicsServer3D::G6DOFJointAxisParam p_param) const override;
-	void _generic_6dof_joint_set_flag(const RID& p_joint, Vector3::Axis p_axis, PhysicsServer3D::G6DOFJointAxisFlag p_flag, bool p_enable) override;
-	bool _generic_6dof_joint_get_flag(const RID& p_joint, Vector3::Axis p_axis, PhysicsServer3D::G6DOFJointAxisFlag p_flag) const override;
+	// Unsupported joint types create nothing and warn loudly rather than silently no-op.
+	void _joint_make_generic_6dof(const RID& p_joint, const RID& p_body_a, const Transform3D& p_local_ref_a,
+								  const RID& p_body_b, const Transform3D& p_local_ref_b) override;
+	void _generic_6dof_joint_set_param(const RID& p_joint, Vector3::Axis p_axis,
+									   PhysicsServer3D::G6DOFJointAxisParam p_param, double p_value) override;
+	double _generic_6dof_joint_get_param(const RID& p_joint, Vector3::Axis p_axis,
+										 PhysicsServer3D::G6DOFJointAxisParam p_param) const override;
+	void _generic_6dof_joint_set_flag(const RID& p_joint, Vector3::Axis p_axis,
+									  PhysicsServer3D::G6DOFJointAxisFlag p_flag, bool p_enable) override;
+	bool _generic_6dof_joint_get_flag(const RID& p_joint, Vector3::Axis p_axis,
+									  PhysicsServer3D::G6DOFJointAxisFlag p_flag) const override;
 
 	PhysicsServer3D::JointType _joint_get_type(const RID& p_joint) const override;
 	void _joint_set_solver_priority(const RID& p_joint, int32_t p_priority) override;
@@ -211,7 +232,8 @@ public:
 
 	// --- Soft bodies (non-goal: return invalid RID / no-op) ---
 	RID _soft_body_create() override;
-	void _soft_body_update_rendering_server(const RID& p_body, PhysicsServer3DRenderingServerHandler* p_rendering_server_handler) override;
+	void _soft_body_update_rendering_server(const RID& p_body,
+											PhysicsServer3DRenderingServerHandler* p_rendering_server_handler) override;
 	void _soft_body_set_space(const RID& p_body, const RID& p_space) override;
 	RID _soft_body_get_space(const RID& p_body) const override;
 	void _soft_body_set_ray_pickable(const RID& p_body, bool p_enable) override;
@@ -257,10 +279,10 @@ public:
 	bool _is_flushing_queries() const override;
 	int32_t _get_process_info(PhysicsServer3D::ProcessInfo p_process_info) override;
 
-protected:
-	static void _bind_methods() {}
+  protected:
+	static void _bind_methods();
 
-private:
+  private:
 	Box3DShapedObjectImpl3D* _get_shaped_object(const RID& p_rid) const;
 
 	// Godot passes a space RID to the area API to reach that space's default area.
