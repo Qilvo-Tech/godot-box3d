@@ -42,6 +42,12 @@ public:
 
 	bool has_shape_id() const { return B3_IS_NON_NULL(shape_id); }
 
+	b3BodyId get_auxiliary_body_id() const { return auxiliary_body_id; }
+
+	void set_auxiliary_body_id(b3BodyId p_id) { auxiliary_body_id = p_id; }
+
+	bool has_auxiliary_body_id() const { return B3_IS_NON_NULL(auxiliary_body_id); }
+
 	uint32_t get_index() const { return index; }
 
 	void set_index(uint32_t p_index) { index = p_index; }
@@ -55,6 +61,9 @@ private:
 	Box3DShapeImpl3D* shape = nullptr;
 	Transform3D transform;
 	b3ShapeId shape_id = b3_nullShapeId;
+	// Box3D height fields have no local transform. An attached heightmap therefore
+	// lives on a private static body whose transform represents the Godot shape offset.
+	b3BodyId auxiliary_body_id = b3_nullBodyId;
 	b3MeshData* owned_mesh = nullptr;
 	uint32_t index = 0;
 	bool disabled = false;
