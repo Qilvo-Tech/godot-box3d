@@ -28,6 +28,11 @@ class Box3DPhysicsServer3D final : public PhysicsServer3DExtension {
 
 	~Box3DPhysicsServer3D() override;
 
+	// Godot lazily resolves PhysicsServer3D extension callbacks on first use. Resolve
+	// the shape callbacks on the server thread before worker-thread callers can race
+	// that cache initialization.
+	void warm_up_threaded_shape_api();
+
 	Box3DShapeImpl3D* get_shape(const RID& p_rid) const { return shape_owner.get_or_null(p_rid); }
 
 	Box3DBodyImpl3D* get_body(const RID& p_rid) const { return body_owner.get_or_null(p_rid); }

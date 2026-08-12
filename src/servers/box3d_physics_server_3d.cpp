@@ -48,6 +48,16 @@ Box3DPhysicsServer3D::~Box3DPhysicsServer3D() {
 	}
 }
 
+void Box3DPhysicsServer3D::warm_up_threaded_shape_api() {
+	const RID shape = sphere_shape_create();
+	if (!shape.is_valid()) {
+		return;
+	}
+	shape_set_data(shape, 0.5);
+	shape_get_type(shape);
+	free_rid(shape);
+}
+
 Box3DShapedObjectImpl3D* Box3DPhysicsServer3D::_get_shaped_object(const RID& p_rid) const {
 	if (Box3DBodyImpl3D* body = body_owner.get_or_null(p_rid)) {
 		return body;

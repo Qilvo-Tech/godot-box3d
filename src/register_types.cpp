@@ -15,7 +15,9 @@ using namespace godot;
 namespace {
 
 Box3DPhysicsServer3D* _create_box3d_physics_server() {
-	return memnew(Box3DPhysicsServer3D);
+	Box3DPhysicsServer3D* server = memnew(Box3DPhysicsServer3D);
+	server->warm_up_threaded_shape_api();
+	return server;
 }
 
 } // namespace
