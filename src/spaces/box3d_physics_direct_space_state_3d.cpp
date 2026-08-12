@@ -231,6 +231,7 @@ bool collide_shape_result_fcn(b3ShapeId p_shape_id, void* p_context) {
 
 struct RayContext {
 	const Box3DQueryFilter3D* filter = nullptr;
+	bool apply_hit_from_inside = false;
 	bool hit_from_inside = false;
 	bool has_hit = false;
 	b3ShapeId shape_id = b3_nullShapeId;
@@ -248,11 +249,14 @@ float cast_result_fcn(b3ShapeId p_shape_id, b3Pos p_point, b3Vec3 p_normal, floa
 	if (!should_report(b3Body_GetUserData(body_id), *ctx->filter, object)) {
 		return -1.0f;
 	}
+	if (p_fraction == 0.0f && ctx->apply_hit_from_inside && !ctx->hit_from_inside) {
+		return -1.0f;
+	}
 
 	ctx->has_hit = true;
 	ctx->shape_id = p_shape_id;
 	ctx->point = p_point;
-	ctx->normal = p_normal;
+	ctx->normal = p_fraction == 0.0f && ctx->apply_hit_from_inside ? b3Vec3_zero : p_normal;
 	ctx->fraction = p_fraction;
 	return p_fraction;
 }
@@ -271,6 +275,7 @@ bool Box3DPhysicsDirectSpaceState3D::_intersect_ray(const Vector3& p_from, const
 
 	RayContext context;
 	context.filter = &filter;
+	context.apply_hit_from_inside = true;
 	context.hit_from_inside = p_hit_from_inside;
 
 	const b3Vec3 origin = godot_to_b3(p_from);
