@@ -53,8 +53,10 @@ real_t Box3DHingeJointImpl3D::get_param(Param p_param) const {
 void Box3DHingeJointImpl3D::set_param(Param p_param, real_t p_value) {
 	switch (p_param) {
 		case PhysicsServer3D::HINGE_JOINT_BIAS:
+			if (!Math::is_equal_approx(bias, p_value)) {
+				WARN_PRINT_ONCE("Box3D: HingeJoint3D's BIAS parameter has no Box3D equivalent and is ignored.");
+			}
 			bias = p_value;
-			WARN_PRINT_ONCE("Box3D: HingeJoint3D's BIAS parameter has no Box3D equivalent and is ignored.");
 			break;
 		case PhysicsServer3D::HINGE_JOINT_LIMIT_UPPER:
 			limit_upper = p_value;
@@ -65,16 +67,22 @@ void Box3DHingeJointImpl3D::set_param(Param p_param, real_t p_value) {
 			_apply_limit();
 			break;
 		case PhysicsServer3D::HINGE_JOINT_LIMIT_BIAS:
+			if (!Math::is_equal_approx(limit_bias, p_value)) {
+				WARN_PRINT_ONCE("Box3D: HingeJoint3D's LIMIT_BIAS parameter has no Box3D equivalent and is ignored.");
+			}
 			limit_bias = p_value;
-			WARN_PRINT_ONCE("Box3D: HingeJoint3D's LIMIT_BIAS parameter has no Box3D equivalent and is ignored.");
 			break;
 		case PhysicsServer3D::HINGE_JOINT_LIMIT_SOFTNESS:
+			if (!Math::is_equal_approx(limit_softness, p_value)) {
+				WARN_PRINT_ONCE("Box3D: HingeJoint3D's LIMIT_SOFTNESS parameter has no Box3D equivalent and is ignored.");
+			}
 			limit_softness = p_value;
-			WARN_PRINT_ONCE("Box3D: HingeJoint3D's LIMIT_SOFTNESS parameter has no Box3D equivalent and is ignored.");
 			break;
 		case PhysicsServer3D::HINGE_JOINT_LIMIT_RELAXATION:
+			if (!Math::is_equal_approx(limit_relaxation, p_value)) {
+				WARN_PRINT_ONCE("Box3D: HingeJoint3D's LIMIT_RELAXATION parameter has no Box3D equivalent and is ignored.");
+			}
 			limit_relaxation = p_value;
-			WARN_PRINT_ONCE("Box3D: HingeJoint3D's LIMIT_RELAXATION parameter has no Box3D equivalent and is ignored.");
 			break;
 		case PhysicsServer3D::HINGE_JOINT_MOTOR_TARGET_VELOCITY:
 			motor_target_velocity = p_value;
