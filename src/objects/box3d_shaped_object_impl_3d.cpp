@@ -35,6 +35,7 @@ Transform3D get_heightmap_body_transform(
 b3ShapeId create_box3d_shape(
 		b3BodyId p_body_id,
 		Box3DShapeInstance3D& p_instance,
+		const Vector3& p_object_scale,
 		uint32_t p_layer,
 		uint32_t p_mask,
 		bool p_is_sensor,
@@ -125,6 +126,7 @@ b3ShapeId create_box3d_shape(
 		case PhysicsServer3D::SHAPE_CONCAVE_POLYGON: {
 			auto* mesh_shape = static_cast<Box3DConcavePolygonShapeImpl3D*>(shape);
 			def.invokeContactCreation = true;
+			const b3Vec3 mesh_scale = godot_to_b3(p_object_scale);
 
 			// b3CreateMeshShape takes no transform, so an offset or rotated instance needs
 			// its own mesh with the local transform baked into the vertices.
@@ -133,7 +135,7 @@ b3ShapeId create_box3d_shape(
 				if (mesh == nullptr) {
 					return b3_nullShapeId;
 				}
-				return b3CreateMeshShape(p_body_id, &def, mesh, b3Vec3{1.0f, 1.0f, 1.0f});
+				return b3CreateMeshShape(p_body_id, &def, mesh, mesh_scale);
 			}
 
 			b3MeshData* baked = Box3DConcavePolygonShapeImpl3D::build_mesh(mesh_shape->get_faces(), local);
@@ -141,7 +143,7 @@ b3ShapeId create_box3d_shape(
 				return b3_nullShapeId;
 			}
 			p_instance.set_owned_mesh(baked);
-			return b3CreateMeshShape(p_body_id, &def, baked, b3Vec3{1.0f, 1.0f, 1.0f});
+			return b3CreateMeshShape(p_body_id, &def, baked, mesh_scale);
 		}
 
 		case PhysicsServer3D::SHAPE_HEIGHTMAP: {
@@ -206,6 +208,8 @@ Transform3D Box3DShapedObjectImpl3D::get_transform() const {
 }
 
 void Box3DShapedObjectImpl3D::set_transform(const Transform3D& p_transform) {
+	const Vector3 previous_scale = cached_transform.basis.get_scale();
+	const Vector3 object_scale = p_transform.basis.get_scale();
 	cached_transform = p_transform;
 	if (has_body_id()) {
 		const b3Transform t = godot_to_b3_transform(p_transform);
@@ -220,6 +224,23 @@ void Box3DShapedObjectImpl3D::set_transform(const Transform3D& p_transform) {
 					instance.get_auxiliary_body_id(),
 					auxiliary_transform.p,
 					auxiliary_transform.q);
+		}
+		bool rebuilt_concave = false;
+		if (!previous_scale.is_equal_approx(object_scale)) {
+			for (auto& instance : shapes) {
+				Box3DShapeImpl3D* shape = instance.get_shape();
+				if (shape == nullptr || shape->get_type() != PhysicsServer3D::SHAPE_CONCAVE_POLYGON) {
+					continue;
+				}
+				_destroy_shape_instance(instance);
+				if (!instance.is_disabled()) {
+					_create_shape_instance(instance);
+					rebuilt_concave = true;
+				}
+			}
+			if (rebuilt_concave) {
+				_shapes_changed();
+			}
 		}
 	}
 }
@@ -477,7 +498,7 @@ void Box3DShapedObjectImpl3D::_create_shape_instance(Box3DShapeInstance3D& p_ins
 		p_instance.set_auxiliary_body_id(shape_body_id);
 	}
 
-	const b3ShapeId shape_id = create_box3d_shape(shape_body_id, p_instance, collision_layer, collision_mask, _is_sensor_body(), &p_instance, _get_shape_friction(), _get_shape_restitution());
+	const b3ShapeId shape_id = create_box3d_shape(shape_body_id, p_instance, cached_transform.basis.get_scale(), collision_layer, collision_mask, _is_sensor_body(), &p_instance, _get_shape_friction(), _get_shape_restitution());
 	p_instance.set_shape_id(shape_id);
 	if (!p_instance.has_shape_id() && p_instance.has_auxiliary_body_id()) {
 		b3DestroyBody(p_instance.get_auxiliary_body_id());

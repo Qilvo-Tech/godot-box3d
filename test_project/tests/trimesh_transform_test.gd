@@ -13,8 +13,9 @@ func _run() -> void:
 	var floor_body: StaticBody3D = StaticBody3D.new()
 	var plane_mesh: PlaneMesh = PlaneMesh.new()
 	plane_mesh.size = Vector2(20, 20)
+	var plane_shape: Shape3D = plane_mesh.create_trimesh_shape()
 	var collision: CollisionShape3D = CollisionShape3D.new()
-	collision.shape = plane_mesh.create_trimesh_shape()
+	collision.shape = plane_shape
 	collision.position = Vector3(0, 4, 0)
 	floor_body.add_child(collision)
 	root.add_child(floor_body)
@@ -28,12 +29,40 @@ func _run() -> void:
 	ball.add_child(ball_collision)
 	root.add_child(ball)
 
+	# The physics body transform carries parent scale. Box3D body transforms have
+	# no scale, so the backend must apply it to the trimesh and its local offset.
+	var scaled_floor: StaticBody3D = StaticBody3D.new()
+	scaled_floor.position = Vector3(25, 0, 0)
+	scaled_floor.scale = Vector3.ONE * 2.0
+	var scaled_collision: CollisionShape3D = CollisionShape3D.new()
+	scaled_collision.shape = plane_shape
+	scaled_collision.position = Vector3(0, 2, 0)
+	scaled_floor.add_child(scaled_collision)
+	root.add_child(scaled_floor)
+
+	var scaled_ball: RigidBody3D = RigidBody3D.new()
+	scaled_ball.position = Vector3(25, 12, 0)
+	var scaled_ball_collision: CollisionShape3D = CollisionShape3D.new()
+	scaled_ball_collision.shape = sphere
+	scaled_ball.add_child(scaled_ball_collision)
+	root.add_child(scaled_ball)
+
 	for frame in 240:
 		await physics_frame
 
 	var resting_y: float = ball.global_position.y
 	_check(resting_y > 3.5, "body rests on an offset trimesh, not at the body origin")
 	_check(absf(resting_y - 4.5) < 0.2, "resting height matches the offset shape surface")
+	var scaled_resting_y: float = scaled_ball.global_position.y
+	_check(absf(scaled_resting_y - 4.5) < 0.2, "body scale is baked into the trimesh and its local offset")
+
+	scaled_floor.scale = Vector3.ONE * 1.5
+	for frame: int in 120:
+		await physics_frame
+	_check(
+		absf(scaled_ball.global_position.y - 3.5) < 0.2,
+		"changing body scale rebuilds the scaled trimesh",
+	)
 
 	if failures == 0:
 		print("RESULT: PASS - trimesh honors its local shape transform")
