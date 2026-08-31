@@ -10,6 +10,7 @@ func _initialize() -> void:
 func _run() -> void:
 	var mover: AnimatableBody3D = _make_capsule_body()
 	var wall: StaticBody3D = _make_concave_wall()
+	_make_heightmap()
 
 	await physics_frame
 	await physics_frame
@@ -73,6 +74,76 @@ func _run() -> void:
 		cast_fraction > 0.2 and cast_fraction < 0.5,
 		"capsule cast stops at the wall",
 	)
+	var wall_backface_fraction: float = Box3DPhysicsServer3D.body_cast_mover(
+		mover.get_rid(),
+		Transform3D(Basis(), Vector3(3, 0, 0)),
+		Vector3(-3, 0, 0),
+		0.0,
+		exclude,
+	)
+	_check(
+		is_equal_approx(wall_backface_fraction, 1.0),
+		"capsule cast ignores a concave wall backface",
+	)
+	var wall_backface_planes: Dictionary = Box3DPhysicsServer3D.body_collide_mover(
+		mover.get_rid(),
+		Transform3D(Basis(), Vector3(2, 0, 0)),
+		0.1,
+		8,
+		exclude,
+	)
+	var wall_backface_normals: PackedVector3Array = wall_backface_planes.get(
+		&"normals",
+		PackedVector3Array(),
+	)
+	_check(wall_backface_normals.is_empty(), "mover overlap ignores a concave wall backface")
+
+	var height_front_fraction: float = Box3DPhysicsServer3D.body_cast_mover(
+		mover.get_rid(),
+		Transform3D(Basis(), Vector3(10, 3, 0)),
+		Vector3(0, -3, 0),
+		0.0,
+		exclude,
+	)
+	_check(
+		height_front_fraction < 1.0,
+		"capsule cast hits a heightfield front face",
+	)
+	var height_back_fraction: float = Box3DPhysicsServer3D.body_cast_mover(
+		mover.get_rid(),
+		Transform3D(Basis(), Vector3(10, -3, 0)),
+		Vector3(0, 3, 0),
+		0.0,
+		exclude,
+	)
+	_check(
+		is_equal_approx(height_back_fraction, 1.0),
+		"capsule cast ignores a heightfield backface",
+	)
+	var height_front_planes: Dictionary = Box3DPhysicsServer3D.body_collide_mover(
+		mover.get_rid(),
+		Transform3D(Basis(), Vector3(10, 1, 0)),
+		0.1,
+		8,
+		exclude,
+	)
+	var height_front_normals: PackedVector3Array = height_front_planes.get(
+		&"normals",
+		PackedVector3Array(),
+	)
+	_check(not height_front_normals.is_empty(), "mover overlap hits a heightfield front face")
+	var height_back_planes: Dictionary = Box3DPhysicsServer3D.body_collide_mover(
+		mover.get_rid(),
+		Transform3D(Basis(), Vector3(10, -1, 0)),
+		0.1,
+		8,
+		exclude,
+	)
+	var height_back_normals: PackedVector3Array = height_back_planes.get(
+		&"normals",
+		PackedVector3Array(),
+	)
+	_check(height_back_normals.is_empty(), "mover overlap ignores a heightfield backface")
 
 	exclude.append(wall.get_rid())
 	var excluded_fraction: float = Box3DPhysicsServer3D.body_cast_mover(
@@ -140,6 +211,24 @@ func _make_concave_wall() -> StaticBody3D:
 		),
 	)
 	collision.shape = wall
+	body.add_child(collision)
+	root.add_child(body)
+	return body
+
+
+func _make_heightmap() -> StaticBody3D:
+	var body: StaticBody3D = StaticBody3D.new()
+	body.position = Vector3(10, 0, 0)
+	var collision: CollisionShape3D = CollisionShape3D.new()
+	var heightmap: HeightMapShape3D = HeightMapShape3D.new()
+	heightmap.map_width = 3
+	heightmap.map_depth = 3
+	heightmap.map_data = PackedFloat32Array([
+		0.0, 0.0, 0.0,
+		0.0, 0.0, 0.0,
+		0.0, 0.0, 0.0,
+	])
+	collision.shape = heightmap
 	body.add_child(collision)
 	root.add_child(body)
 	return body
