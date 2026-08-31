@@ -50,12 +50,10 @@ b3MeshData* Box3DConcavePolygonShapeImpl3D::build_mesh(
 		vertices[i] = godot_to_b3(p_transform.xform(p_faces[i]));
 	}
 
-	// Box3D meshes use the opposite winding order to Godot's concave shapes, so emit
-	// each triangle reversed (v0, v2, v1) to make trimesh collision register.
 	for (int t = 0; t < triangle_count; t++) {
 		indices[t * 3 + 0] = t * 3 + 0;
-		indices[t * 3 + 1] = t * 3 + 2;
-		indices[t * 3 + 2] = t * 3 + 1;
+		indices[t * 3 + 1] = t * 3 + 1;
+		indices[t * 3 + 2] = t * 3 + 2;
 	}
 
 	b3MeshDef def = {};
