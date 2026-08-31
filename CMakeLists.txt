@@ -55,6 +55,7 @@ set(BOX3D_DOCS OFF CACHE BOOL "" FORCE)
 set(BOX3D_UNIT_TESTS OFF CACHE BOOL "" FORCE)
 
 add_subdirectory(box3d)
+set_target_properties(box3d PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 # --- godot-cpp (fetched via ExternalProject_Add) ---
 include(cmake/GodotBox3DExternalGodotCpp.cmake)
