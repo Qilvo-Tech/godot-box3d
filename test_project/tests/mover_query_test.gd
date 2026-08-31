@@ -131,11 +131,11 @@ func _make_concave_wall() -> StaticBody3D:
 		PackedVector3Array(
 			[
 				bottom_left,
-				top_right,
 				top_left,
-				bottom_left,
-				bottom_right,
 				top_right,
+				bottom_left,
+				top_right,
+				bottom_right,
 			],
 		),
 	)
