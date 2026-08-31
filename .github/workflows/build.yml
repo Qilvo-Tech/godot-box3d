@@ -14,8 +14,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            cmake-generator: Ninja
           - os: windows-latest
             cmake-generator: Ninja
           - os: macos-latest
@@ -27,10 +25,6 @@ jobs:
       - uses: actions/checkout@v7
         with:
           submodules: true
-
-      - name: Install dependencies (Linux)
-        if: runner.os == 'Linux'
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq curl ninja-build unzip
 
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
@@ -51,8 +45,33 @@ jobs:
       - name: Build
         run: cmake --build build --parallel
 
-      - name: Install Godot (Linux)
-        if: runner.os == 'Linux'
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: godot-box3d-${{ runner.os }}
+          path: bin/
+
+  build-linux:
+    runs-on: ubuntu-latest
+    container: registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Install dependencies
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq ca-certificates curl ninja-build unzip
+
+      - name: Configure
+        run: cmake -B build -G Ninja
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Install Godot
         shell: bash
         env:
           GODOT_VERSION: 4.7-stable
@@ -65,8 +84,7 @@ jobs:
           unzip -o "$RUNNER_TEMP/${GODOT_ZIP_NAME}.zip" -d "$RUNNER_TEMP/godot"
           chmod +x "$RUNNER_TEMP/godot/${GODOT_ZIP_NAME}"
 
-      - name: Run headless tests (Linux)
-        if: runner.os == 'Linux'
+      - name: Run headless tests
         shell: bash
         env:
           GODOT_BIN: ${{ runner.temp }}/godot/Godot_v4.7-stable_linux.x86_64
@@ -74,7 +92,7 @@ jobs:
         run: scripts/run_headless_tests.sh
 
       - name: Publish test summary
-        if: runner.os == 'Linux' && always()
+        if: always()
         shell: bash
         run: |
           if [[ -f "$RUNNER_TEMP/test-summary.md" ]]; then
@@ -86,7 +104,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: godot-box3d-${{ runner.os }}
+          name: godot-box3d-Linux
           path: bin/
 
   web:
@@ -133,7 +151,7 @@ jobs:
           path: bin/libgodot-box3d.web.release.wasm32.${{ matrix.variant }}.wasm
 
   release:
-    needs: [build, web]
+    needs: [build, build-linux, web]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
