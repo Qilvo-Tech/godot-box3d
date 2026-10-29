@@ -263,6 +263,8 @@ class Box3DPhysicsServer3D final : public PhysicsServer3DExtension {
 	double _soft_body_get_damping_coefficient(const RID& p_body) const override;
 	void _soft_body_set_drag_coefficient(const RID& p_body, double p_drag_coefficient) override;
 	double _soft_body_get_drag_coefficient(const RID& p_body) const override;
+	void _soft_body_set_shrinking_factor(const RID& p_body, float p_shrinking_factor);
+	float _soft_body_get_shrinking_factor(const RID& p_body) const;
 	void _soft_body_set_mesh(const RID& p_body, const RID& p_mesh) override;
 	AABB _soft_body_get_bounds(const RID& p_body) const override;
 	void _soft_body_move_point(const RID& p_body, int32_t p_point_index, const Vector3& p_global_position) override;

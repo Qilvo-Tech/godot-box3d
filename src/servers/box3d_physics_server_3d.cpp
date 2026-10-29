@@ -30,6 +30,9 @@
 Box3DPhysicsServer3D* Box3DPhysicsServer3D::singleton = nullptr;
 
 void Box3DPhysicsServer3D::_bind_methods() {
+	// These Godot 4.8 virtuals are absent from the pinned godot-cpp 4.3 headers.
+	BIND_VIRTUAL_METHOD(Box3DPhysicsServer3D, _soft_body_set_shrinking_factor);
+	BIND_VIRTUAL_METHOD(Box3DPhysicsServer3D, _soft_body_get_shrinking_factor);
 	ClassDB::bind_static_method("Box3DPhysicsServer3D",
 								D_METHOD("body_collide_mover", "body", "from", "margin", "max_results", "exclude"),
 								&Box3DPhysicsServer3D::body_collide_mover);
@@ -1318,6 +1321,12 @@ void Box3DPhysicsServer3D::_soft_body_set_damping_coefficient(const RID& p_body,
 
 double Box3DPhysicsServer3D::_soft_body_get_damping_coefficient(const RID& p_body) const {
 	return 0.0;
+}
+
+void Box3DPhysicsServer3D::_soft_body_set_shrinking_factor(const RID& p_body, float p_shrinking_factor) {}
+
+float Box3DPhysicsServer3D::_soft_body_get_shrinking_factor(const RID& p_body) const {
+	return 0.0f;
 }
 
 void Box3DPhysicsServer3D::_soft_body_set_drag_coefficient(const RID& p_body, double p_drag_coefficient) {}

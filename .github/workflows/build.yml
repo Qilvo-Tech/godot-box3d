@@ -53,7 +53,7 @@ jobs:
 
   build-linux:
     runs-on: ubuntu-latest
-    container: registry.gitlab.steamos.cloud/steamrt/sniper/sdk@sha256:1c33c507bc75d012e77df5727f93b0d5b8c3f7c8d4142ba5f7a16882cc92e014
+    container: registry.gitlab.steamos.cloud/steamrt/steamrt4/sdk:4.0.20260805.254769@sha256:2ff6220464894964266c7dbda1b91ca24e433a58ad3edff26571a2a9e5163e00
 
     steps:
       - uses: actions/checkout@v7
@@ -77,8 +77,8 @@ jobs:
       - name: Install Godot
         shell: bash
         env:
-          GODOT_VERSION: 4.7-stable
-          GODOT_ZIP_NAME: Godot_v4.7-stable_linux.x86_64
+          GODOT_VERSION: 4.8-beta1
+          GODOT_ZIP_NAME: Godot_v4.8-beta1_linux.x86_64
         run: |
           mkdir -p "$RUNNER_TEMP/godot"
           curl -L --fail --retry 3 \
@@ -90,7 +90,7 @@ jobs:
       - name: Run headless tests
         shell: bash
         env:
-          GODOT_BIN: ${{ runner.temp }}/godot/Godot_v4.7-stable_linux.x86_64
+          GODOT_BIN: ${{ runner.temp }}/godot/Godot_v4.8-beta1_linux.x86_64
           TEST_SUMMARY: ${{ runner.temp }}/test-summary.md
         run: scripts/run_headless_tests.sh
 
